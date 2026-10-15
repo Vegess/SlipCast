@@ -1,0 +1,18 @@
+# Render blueprint for the API. Create a Neon (or Render) Postgres and set DATABASE_URL.
+services:
+  - type: web
+    name: plotline-api
+    runtime: docker
+    rootDir: backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: AUTO_CREATE_TABLES
+        value: "false"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false

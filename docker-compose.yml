@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: plotline
+      POSTGRES_PASSWORD: plotline
+      POSTGRES_DB: plotline
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U plotline"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://plotline:plotline@db:5432/plotline
+      JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
+      CORS_ORIGINS: http://localhost:4200
+      AUTO_CREATE_TABLES: "false"
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./web
+    environment:
+      API_URL: http://localhost:8000
+    ports:
+      - "4200:8080"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
