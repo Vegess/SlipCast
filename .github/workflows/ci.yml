@@ -15,12 +15,12 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: plotline
-          POSTGRES_PASSWORD: plotline
-          POSTGRES_DB: plotline
+          POSTGRES_USER: slipcast
+          POSTGRES_PASSWORD: slipcast
+          POSTGRES_DB: slipcast
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U plotline" --health-interval 5s --health-retries 10
+          --health-cmd "pg_isready -U slipcast" --health-interval 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,7 +33,7 @@ jobs:
         run: ruff check . && ruff format --check .
       - name: Migrations apply on Postgres and match the models
         env:
-          DATABASE_URL: postgresql://plotline:plotline@localhost:5432/plotline
+          DATABASE_URL: postgresql://slipcast:slipcast@localhost:5432/slipcast
         run: alembic upgrade head && alembic check
       - name: Tests
         run: pytest

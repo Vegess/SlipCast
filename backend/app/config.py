@@ -8,9 +8,9 @@ DEFAULT_SECRET = "change-me-in-production"
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    app_name: str = "Plotline"
+    app_name: str = "SlipCast"
     environment: str = "development"
-    database_url: str = "sqlite:///./plotline.db"
+    database_url: str = "sqlite:///./slipcast.db"
     auto_create_tables: bool = True
 
     jwt_secret: str = DEFAULT_SECRET

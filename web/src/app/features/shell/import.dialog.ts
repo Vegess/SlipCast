@@ -21,7 +21,7 @@ interface ImportReport {
   <app-modal heading="Import tickets from CSV" [wide]="!!report()" (closed)="closed.emit()">
     @if (!report()) {
       <div class="grid gap-4">
-        <p class="note">Export issues from Jira, GitHub Issues or Trello as CSV. Plotline maps the columns automatically
+        <p class="note">Export issues from Jira, GitHub Issues or Trello as CSV. SlipCast maps the columns automatically
           and shows a data-quality report. Up to 5,000 rows or 5 MB.</p>
         <label class="label">CSV file
           <input class="input file:mr-3 file:rounded-md file:border-0 file:bg-raised file:px-3 file:py-1 file:text-fg"

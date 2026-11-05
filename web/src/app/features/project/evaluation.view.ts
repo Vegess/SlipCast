@@ -92,7 +92,7 @@ interface Evaluation {
           <div><p class="stat-value" [class.text-ok]="b.p85_hit_rate >= .8" [class.text-accent]="b.p85_hit_rate < .8">{{ pct(b.p85_hit_rate) }}</p><p class="note mt-1">finished within the 85% forecast (target ≈85%)</p></div>
           <div><p class="stat-value">{{ num(b.p50_mean_abs_error_days) }}<span class="text-base text-muted"> d</span></p><p class="note mt-1">average miss of the 50% date</p></div>
         </div>
-        <p class="note mt-3">At each past date Plotline forecast how long the next {{ b.batch_size }} tickets would take, then checked what really happened.</p>
+        <p class="note mt-3">At each past date SlipCast forecast how long the next {{ b.batch_size }} tickets would take, then checked what really happened.</p>
         <app-chart class="mt-3 h-64" [options]="backtest()" ariaLabel="Forecast backtest chart" />
       }
     </section>

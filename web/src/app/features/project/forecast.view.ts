@@ -31,7 +31,7 @@ interface RiskList { available: boolean; reason?: string; items: { id: string; t
             <div><p class="stat-value">{{ longDate(f.p95) }}</p><p class="note mt-1">95% likely</p></div>
           </div>
           <p class="note mt-5">
-            Plotline ran {{ f.simulations.toLocaleString() }} simulations, each replaying random weeks from your last
+            SlipCast ran {{ f.simulations.toLocaleString() }} simulations, each replaying random weeks from your last
             12 weeks of throughput ({{ f.history_weeks.join(', ') }} tickets) until the remaining work is done.
             Committing to the 85% date means you'd hit it in 17 of 20 similar situations.
           </p>

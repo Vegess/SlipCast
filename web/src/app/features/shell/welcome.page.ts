@@ -9,7 +9,7 @@ import { WorkspaceStore } from '../../core/workspace.store';
     <div class="max-w-2xl px-6 py-12 sm:px-10">
       <h1 class="text-4xl font-bold leading-tight">Start with your team's ticket history.</h1>
       <p class="mt-4 text-muted">
-        Plotline works from your real ticket history: when work was created, started, blocked and finished.
+        SlipCast works from your real ticket history: when work was created, started, blocked and finished.
         Import a CSV export from Jira, GitHub Issues or Trello, or explore the demo dataset first.
       </p>
       <div class="mt-8 grid gap-4 sm:grid-cols-3">

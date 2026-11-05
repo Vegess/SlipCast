@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Api } from './api.service';
 import { User, Workspace } from './models';
 
-const TOKEN_KEY = 'plotline_token';
+const TOKEN_KEY = 'slipcast_token';
 
 interface TokenOut { access_token: string; user: User; }
 interface MeOut { user: User; workspaces: Workspace[]; }

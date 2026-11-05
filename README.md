@@ -1,8 +1,10 @@
-# Plotline
+# SlipCast
 
 **Delivery analytics for software teams: know when work will really ship, and why it slips.**
 
-Plotline turns a team's ticket history (from Jira, GitHub Issues or Trello) into a clear picture of how work flows: what's moving, what's stuck, and, as the project grows, how long work really takes and when it will finish.
+> This project was formerly called Plotline; it was renamed to SlipCast in v0.5.1.
+
+SlipCast turns a team's ticket history (from Jira, GitHub Issues or Trello) into a clear picture of how work flows: what's moving, what's stuck, and, as the project grows, how long work really takes and when it will finish.
 
 ![Board with project health](docs/screenshots/board.png)
 
@@ -10,7 +12,7 @@ Plotline turns a team's ticket history (from Jira, GitHub Issues or Trello) into
 
 Software teams miss delivery dates constantly, and most managers can't explain why until it's too late. Tools in the "engineering intelligence" space mostly analyse numbers such as how long tickets take, throughput and Git activity. The *text* inside tickets (titles, descriptions) is largely ignored, even though it often explains why work is slow: "Flaky payment webhook" and "Update footer link" are both just one ticket in a throughput chart.
 
-Plotline's direction is to analyse **both the numbers and the words** in tickets, using methods that can be measured and explained, and to use an LLM only for turning computed findings into advice.
+SlipCast's direction is to analyse **both the numbers and the words** in tickets, using methods that can be measured and explained, and to use an LLM only for turning computed findings into advice.
 
 ## Project status
 

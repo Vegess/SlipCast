@@ -2,20 +2,20 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: plotline
-      POSTGRES_PASSWORD: plotline
-      POSTGRES_DB: plotline
+      POSTGRES_USER: slipcast
+      POSTGRES_PASSWORD: slipcast
+      POSTGRES_DB: slipcast
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U plotline"]
+      test: ["CMD-SHELL", "pg_isready -U slipcast"]
       interval: 5s
       retries: 10
 
   api:
     build: ./backend
     environment:
-      DATABASE_URL: postgresql://plotline:plotline@db:5432/plotline
+      DATABASE_URL: postgresql://slipcast:slipcast@db:5432/slipcast
       JWT_SECRET: ${JWT_SECRET:-local-dev-secret-change-me}
       CORS_ORIGINS: http://localhost:4200
       AUTO_CREATE_TABLES: "false"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Commits the project in logical steps. Works on a fresh `git init` or on top of an
-# existing Plotline repo (for example one that still has the old React frontend).
+# existing SlipCast repo (for example one that still has the old React frontend).
 # Usage, from the repo root:  bash scripts/commit-history.sh
 set -euo pipefail
 

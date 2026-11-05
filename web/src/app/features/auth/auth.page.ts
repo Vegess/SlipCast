@@ -9,11 +9,11 @@ import { AuthService } from '../../core/auth.service';
   template: `
   <div class="grid min-h-full lg:grid-cols-[1.25fr_1fr]">
     <section class="flex flex-col justify-between px-6 py-8 sm:px-12 lg:border-r lg:border-line lg:py-14">
-      <span class="font-display text-xl font-bold">Plotline</span>
+      <span class="font-display text-xl font-bold">SlipCast</span>
       <div class="my-10 max-w-xl">
         <h1 class="text-4xl font-bold leading-[1.05] sm:text-6xl">Know when your work will really ship, and why it slips.</h1>
         <p class="mt-5 max-w-md text-base text-muted">
-          Plotline turns your ticket history from Jira, GitHub or Trello into a clear picture of how
+          SlipCast turns your ticket history from Jira, GitHub or Trello into a clear picture of how
           work actually flows through your team, and where it gets stuck.
         </p>
         <svg viewBox="0 0 520 220" class="mt-10 hidden w-full max-w-lg sm:block" aria-hidden="true">
@@ -50,7 +50,7 @@ import { AuthService } from '../../core/auth.service';
           </button>
         </div>
         <p class="mt-6 text-sm text-muted">
-          {{ mode() === 'signin' ? 'New to Plotline?' : 'Already have an account?' }}
+          {{ mode() === 'signin' ? 'New to SlipCast?' : 'Already have an account?' }}
           <button type="button" class="font-medium text-info hover:underline" (click)="toggle()">
             {{ mode() === 'signin' ? 'Create an account' : 'Sign in' }}
           </button>

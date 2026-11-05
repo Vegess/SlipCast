@@ -5,7 +5,7 @@ import { API_URL } from './config';
 
 export function errorMessage(err: unknown): string {
   if (err instanceof HttpErrorResponse) {
-    if (err.status === 0) return "Can't reach the Plotline API. Check that the backend is running.";
+    if (err.status === 0) return "Can't reach the SlipCast API. Check that the backend is running.";
     const detail = err.error?.detail;
     if (typeof detail === 'string') return detail;
     if (Array.isArray(detail) && detail[0]?.msg) {

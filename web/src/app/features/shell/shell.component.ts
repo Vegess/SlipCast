@@ -15,7 +15,7 @@ import { NewProjectDialog } from './new-project.dialog';
     <aside class="flex shrink-0 flex-col border-line bg-panel md:h-full md:w-64 md:border-r">
       <a routerLink="/" class="flex items-center gap-2.5 px-5 pb-1 pt-5">
         <img src="favicon.svg" alt="" width="26" height="26">
-        <span class="font-display text-xl font-bold">Plotline</span>
+        <span class="font-display text-xl font-bold">SlipCast</span>
       </a>
       <p class="truncate px-5 pb-4 text-xs text-muted">{{ auth.workspace()?.name }}</p>
 
