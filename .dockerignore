@@ -1,0 +1,5 @@
+# The API image is built from backend/ and the web image from web/.
+# Never ship analysis notebooks or local environments in any image built from the repo root.
+notebooks/
+**/.venv/
+**/node_modules/
