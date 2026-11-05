@@ -5,7 +5,7 @@ from app.db import get_db
 from app.deps import get_current_user, require_membership
 from app.models import Project, Task, TaskEvent, User
 from app.routers.projects import _out, next_color
-from app.services import demo_data, importer
+from app.services import analysis, demo_data, importer, ledger
 from app.timeutil import naive_utc, now_utc
 
 router = APIRouter(tags=["data"])
@@ -47,8 +47,12 @@ def create_demo_project(
     )
     db.add(project)
     db.flush()
-    rows = demo_data.generate(naive_utc(now_utc()))
+    now = naive_utc(now_utc())
+    rows = demo_data.generate(now)
     _save(db, project, rows, lambda r: r["events"])
+    db.flush()
+    # Replay history so the demo's forecast ledger shows a real track record.
+    ledger.backfill(db, analysis.load(db, project.id, now))
     db.commit()
     return _out(project, {project.id: (len(rows), sum(r["status"] == "done" for r in rows))}).model_dump()
 

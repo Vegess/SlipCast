@@ -6,9 +6,18 @@ from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
 from app.models import Task, TaskEvent, User
 from app.schemas import TaskIn, TaskOut, TaskUpdate
+from app.services import ledger
+from app.services.analysis import get_analysis
 from app.timeutil import now_utc
 
 router = APIRouter(tags=["tasks"])
+
+
+def record_start(task: Task, old_status: str | None, db: Session) -> None:
+    """When a ticket starts, store its reference-class forecast in the ledger (once)."""
+    if task.status == "in_progress" and old_status in (None, "planned"):
+        if ledger.record_ticket(db, get_analysis(db, task.project_id), task):
+            db.commit()
 
 
 def apply_status(task: Task, new_status: str, db: Session) -> None:
@@ -59,6 +68,7 @@ def create_task(
     db.add(task)
     apply_status(task, data["status"], db)
     db.commit()
+    record_start(task, None, db)
     return task
 
 
@@ -78,9 +88,12 @@ def update_task(
         setattr(task, field, value.strip() if isinstance(value, str) else value)
         if field == "kind":
             task.kind_source = "label"
+    old_status = task.status
     if new_status:
         apply_status(task, new_status, db)
     db.commit()
+    if new_status:
+        record_start(task, old_status, db)
     return task
 
 

@@ -2,8 +2,11 @@ import uuid
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
+    JSON,
+    Boolean,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     String,
@@ -119,3 +122,35 @@ class TaskEvent(Base):
     at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     task: Mapped[Task] = relationship(back_populates="events")
+
+
+class Forecast(Base):
+    """Every forecast SlipCast makes, scored automatically once the real outcome is known.
+
+    kind "project_completion": when will the tickets open at `made_at` all be done?
+      Uses p50_date / p85_date; `actual_date` is when the last of them finished.
+    kind "ticket_reference_class": how many days will this ticket take once started?
+      Uses p10/p50/p85/p90_days; `actual_days` is its real cycle time.
+    `hit_p85` is whether the outcome landed within the 85th-percentile forecast; it stays
+    null while unresolved, and for "void" entries whose subject was deleted.
+    """
+
+    __tablename__ = "forecasts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(32))
+    subject_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    made_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    inputs: Mapped[dict] = mapped_column(JSON, default=dict)
+    p50_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    p85_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    p10_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    p50_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    p85_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    p90_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    actual_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    actual_days: Mapped[float | None] = mapped_column(Float, nullable=True)
+    hit_p85: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    void: Mapped[bool] = mapped_column(Boolean, default=False)
