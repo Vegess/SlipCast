@@ -1,9 +1,17 @@
 import { Component, computed, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChartComponent, baseOption } from '../../shared/chart.component';
-import { longDate, pct, todayISO } from '../../shared/format';
+import { longDate, pct, shortDate, todayISO } from '../../shared/format';
 import { projectResource } from './loader';
 
+interface Ledger {
+  available: boolean; reason: string; total: number; resolved: number; unresolved: number; void: number; hit_rate: number | null;
+  project: { resolved: number; hit_rate_p85: number | null };
+  ticket: { resolved: number; hit_rate_p85: number | null; coverage_p10_p90: number | null };
+  calibration: { kind: string; predicted: number; observed: number; n: number }[];
+  entries: { id: string; kind: string; made_at: string; subject: string; p50: string | number | null; p85: string | number | null;
+    band?: [number, number]; actual: string | number | null; resolved: boolean; void: boolean; hit_p85: boolean | null }[];
+}
 interface Forecast {
   forecast: {
     available: boolean; reason?: string; remaining: number; p50: string; p85: string; p95: string;
@@ -57,12 +65,85 @@ interface Forecast {
       </section>
     }
   }
-`,
+
+  <section class="card mt-5">
+    <h3 class="section-title">Track record</h3>
+    <p class="note">Every forecast SlipCast makes is stored and scored automatically when the work is done, so you can see how often it has really been right for this team.</p>
+    @if (ledger.data(); as l) {
+      @if (!l.available) { <p class="note mt-3">{{ l.reason }}</p> } @else {
+        <div class="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
+          <div><p class="stat-value" [class.text-ok]="(l.hit_rate ?? 0) >= .75" [class.text-accent]="(l.hit_rate ?? 0) < .75">{{ pct(l.hit_rate) }}</p><p class="note mt-1">of {{ l.resolved }} scored forecasts landed within their 85% estimate</p></div>
+          <div><p class="stat-value">{{ pct(l.project.hit_rate_p85) }}</p><p class="note mt-1">completion forecasts on time ({{ l.project.resolved }})</p></div>
+          <div><p class="stat-value">{{ pct(l.ticket.coverage_p10_p90) }}</p><p class="note mt-1">tickets inside their "took X–Y days" range (aim ≈80%)</p></div>
+          <div><p class="stat-value">{{ l.unresolved }}</p><p class="note mt-1">forecasts still waiting for an outcome</p></div>
+        </div>
+        <div class="mt-5 grid gap-5 lg:grid-cols-[1fr_1.3fr]">
+          <div>
+            <p class="text-sm font-medium">Calibration</p>
+            <p class="note">If SlipCast says "85% likely", about 85% of those should come true. Points on the dashed line mean the stated odds can be trusted.</p>
+            <app-chart class="mt-2 h-64" [options]="calibration()" ariaLabel="Forecast calibration chart" />
+          </div>
+          <div class="overflow-x-auto">
+            <p class="text-sm font-medium">Latest forecasts</p>
+            <table class="table mt-2">
+              <thead><tr><th>Made</th><th>Forecast for</th><th>85% estimate</th><th>Actual</th><th>Result</th></tr></thead>
+              <tbody>
+                @for (e of l.entries.slice(0, 12); track e.id) {
+                  <tr>
+                    <td class="whitespace-nowrap text-muted">{{ shortDate(e.made_at) }}</td>
+                    <td class="max-w-[220px] truncate" [title]="e.subject">{{ e.subject }}</td>
+                    <td class="whitespace-nowrap">{{ show(e.p85, e.kind) }}</td>
+                    <td class="whitespace-nowrap">{{ e.actual === null ? '—' : show(e.actual, e.kind) }}</td>
+                    <td>
+                      @if (e.void) { <span class="pill bg-raised text-muted">Void</span> }
+                      @else if (!e.resolved) { <span class="pill bg-raised text-muted">Pending</span> }
+                      @else if (e.hit_p85) { <span class="pill bg-ok/15 text-ok">Hit</span> }
+                      @else { <span class="pill bg-bad/15 text-bad">Miss</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      }
+    }
+  </section>`,
 })
 export class ForecastView {
   readonly target = signal<string>('');
   readonly fc = projectResource<Forecast>((id) => `/projects/${id}/analytics/forecast`, (): Record<string, string> => (this.target() ? { target: this.target() } : {}));
-  readonly longDate = longDate; readonly pct = pct; readonly today = todayISO();
+  readonly ledger = projectResource<Ledger>((id) => `/projects/${id}/forecast-ledger`);
+  readonly longDate = longDate; readonly pct = pct; readonly shortDate = shortDate; readonly today = todayISO();
+
+  show(v: string | number | null, kind: string) {
+    if (v === null) return '—';
+    return kind === 'project_completion' ? longDate(String(v)) : `${Number(v).toFixed(1)} days`;
+  }
+
+  readonly calibration = computed(() => {
+    const l = this.ledger.data();
+    if (!l?.available) return {};
+    const series = (kind: string, name: string, color: string) => ({
+      name, type: 'line', symbolSize: 9, data: l.calibration.filter((c) => c.kind === kind).map((c) => [c.predicted, c.observed]),
+      lineStyle: { color, width: 2 }, itemStyle: { color },
+    });
+    const ax = (name: string) => ({ type: 'value', name, min: 0, max: 1, nameLocation: 'middle', nameGap: 26,
+      axisLabel: { color: '#8E98AE', formatter: (v: number) => `${Math.round(v * 100)}%` }, splitLine: { lineStyle: { color: '#1F2638' } },
+      axisLine: { lineStyle: { color: '#262E42' } }, nameTextStyle: { color: '#8E98AE' } });
+    return baseOption({
+      grid: { left: 48, right: 12, top: 30, bottom: 40 },
+      legend: { top: 0, textStyle: { color: '#8E98AE' } },
+      tooltip: { trigger: 'item', backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' },
+        formatter: (p: { seriesName: string; data: [number, number] }) => `${p.seriesName}: said ${Math.round(p.data[0] * 100)}%, happened ${Math.round(p.data[1] * 100)}%` },
+      xAxis: ax('stated probability'), yAxis: { ...ax('how often it came true'), nameGap: 36 },
+      series: [
+        series('ticket_reference_class', 'Ticket durations', '#7D96F2'),
+        series('project_completion', 'Completion dates', '#F2B632'),
+        { type: 'line', symbol: 'none', silent: true, data: [[0, 0], [1, 1]], lineStyle: { color: '#8E98AE', type: 'dashed' } },
+      ],
+    });
+  });
 
   readonly histogram = computed(() => {
     const f = this.fc.data()?.forecast;
