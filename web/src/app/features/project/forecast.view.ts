@@ -12,7 +12,6 @@ interface Forecast {
   };
   burnup: { dates: string[]; scope: number[]; done: number[]; projection?: { p50: [string, number][]; p85: [string, number][] } };
 }
-interface RiskList { available: boolean; reason?: string; items: { id: string; title: string; owner: string; status: string; risk: number; factors: string[] }[]; }
 
 @Component({
   selector: 'app-forecast-view',
@@ -58,28 +57,11 @@ interface RiskList { available: boolean; reason?: string; items: { id: string; t
       </section>
     }
   }
-
-  <section class="card mt-5">
-    <h3 class="section-title">Tickets most likely to slip</h3>
-    <p class="note">A logistic regression trained on your finished tickets predicts which open tickets will miss their due date, using only facts known when each ticket was created.</p>
-    @if (risk.data(); as r) {
-      @if (!r.available) { <p class="note mt-3">{{ r.reason }}</p> } @else {
-        <ul class="mt-3 divide-y divide-line/60">
-          @for (t of r.items.slice(0, 12); track t.id) {
-            <li class="flex gap-4 py-2.5 text-sm">
-              <span class="w-12 shrink-0 font-display text-lg" [class.text-bad]="t.risk >= .6" [class.text-accent]="t.risk >= .35 && t.risk < .6" [class.text-ok]="t.risk < .35">{{ (t.risk * 100).toFixed(0) }}%</span>
-              <div class="min-w-0"><p class="font-medium">{{ t.title }}</p><p class="text-muted">{{ t.owner || 'Unassigned' }} · {{ t.factors.join(' · ') || 'no single dominant factor' }}</p></div>
-            </li>
-          }
-        </ul>
-      }
-    }
-  </section>`,
+`,
 })
 export class ForecastView {
   readonly target = signal<string>('');
   readonly fc = projectResource<Forecast>((id) => `/projects/${id}/analytics/forecast`, (): Record<string, string> => (this.target() ? { target: this.target() } : {}));
-  readonly risk = projectResource<RiskList>((id) => `/projects/${id}/analytics/risk`);
   readonly longDate = longDate; readonly pct = pct; readonly today = todayISO();
 
   readonly histogram = computed(() => {

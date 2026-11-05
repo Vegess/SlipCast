@@ -16,6 +16,8 @@ export const routes: Routes = [
         children: [
           { path: '', pathMatch: 'full', redirectTo: 'board' },
           { path: 'board', loadComponent: () => import('./features/project/board.view').then((m) => m.BoardView) },
+          { path: 'delivery', loadComponent: () => import('./features/project/delivery.view').then((m) => m.DeliveryView) },
+          { path: 'forecast', loadComponent: () => import('./features/project/forecast.view').then((m) => m.ForecastView) },
         ],
       },
     ],

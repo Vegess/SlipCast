@@ -7,6 +7,7 @@ import { projectResource } from './loader';
 
 interface Breakdown { key: string; open: number; done: number; median_cycle_days: number | null; p85_cycle_days: number | null; slip_rate: number | null; }
 interface Flow {
+  available: boolean; reason: string;
   cycle_time: { percentiles: { p50: number; p85: number; p95: number }; points: { id: string; title: string; date: string; days: number; kind: string }[] };
   throughput: { weeks: string[]; counts: number[] };
   cfd: { dates: string[]; series: Record<string, number[]> };
@@ -27,12 +28,14 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
       <div><p class="stat-value">{{ num(o.cycle.p85) }}<span class="text-base text-muted"> d</span></p><p class="note mt-1">85% finish within</p></div>
       <div><p class="stat-value">{{ num(o.throughput_avg) }}</p><p class="note mt-1">tickets done / week</p></div>
       <div><p class="stat-value text-accent">{{ o.forecast_p85 ? longDate(o.forecast_p85) : '—' }}</p><p class="note mt-1">all open work done (85%)</p></div>
-      <div><p class="stat-value" [class.text-bad]="(o.high_risk ?? 0) > 0">{{ o.high_risk ?? '—' }}</p><p class="note mt-1">high slip-risk tickets</p></div>
+      @if (o.high_risk !== null) {
+        <div><p class="stat-value" [class.text-bad]="o.high_risk > 0">{{ o.high_risk }}</p><p class="note mt-1">high slip-risk tickets</p></div>
+      }
     </div>
   }
   @if (flow.data(); as f) {
-    @if (!f.cycle_time.points.length) {
-      <p class="note">Finish some tickets (or import history) to see flow metrics.</p>
+    @if (!f.available) {
+      <p class="note">{{ f.reason }} Finish some tickets (or import history) to see flow metrics.</p>
     } @else {
       <div class="grid gap-5 xl:grid-cols-2">
         <section class="card">
@@ -56,7 +59,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
         <div class="flex flex-wrap items-center gap-3">
           <h3 class="section-title mr-auto">Where time goes</h3>
           <div class="flex gap-1 rounded-lg bg-canvas p-1 ring-1 ring-line" role="tablist">
-            @for (t of groupings; track t[0]) {
+            @for (t of groupings(); track t[0]) {
               <button role="tab" [attr.aria-selected]="group() === t[0]" (click)="group.set(t[0])"
                       class="rounded-md px-3 py-1 text-sm" [class.bg-raised]="group() === t[0]" [class.text-muted]="group() !== t[0]">{{ t[1] }}</button>
             }
@@ -103,7 +106,10 @@ export class DeliveryView {
   readonly ov = projectResource<Overview>((id) => `/projects/${id}/analytics/overview`);
   readonly kindLabel = KIND_LABEL;
   readonly num = num; readonly pct = pct; readonly longDate = longDate;
-  readonly groupings = [['kind', 'Type'], ['topic', 'Theme'], ['owner', 'Owner']] as const;
+  readonly groupings = computed(() => {
+    const all = [['kind', 'Type'], ['topic', 'Theme'], ['owner', 'Owner']] as const;
+    return all.filter(([k]) => k !== 'topic' || (this.flow.data()?.by_topic.length ?? 0) > 0);
+  });
   readonly group = signal<'kind' | 'topic' | 'owner'>('kind');
   readonly groupLabel = computed(() => ({ kind: 'Type', topic: 'Theme', owner: 'Owner' })[this.group()]);
   readonly rows = computed(() => {

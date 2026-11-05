@@ -1,11 +1,11 @@
 import { Component, effect, inject, input, signal } from '@angular/core';
-import { Router, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { errorMessage } from '../../core/api.service';
 import { ProjectContext } from './project.context';
 
 @Component({
   selector: 'app-project-page',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive],
   providers: [ProjectContext],
   template: `
   <div class="px-4 py-6 sm:px-8 sm:py-8">
@@ -25,6 +25,12 @@ import { ProjectContext } from './project.context';
           </div>
           <button class="btn btn-ghost text-muted" (click)="remove()">Delete project</button>
         </div>
+        <nav class="-mb-5 mt-5 flex gap-1 overflow-x-auto" aria-label="Project views">
+          @for (t of tabs; track t[0]) {
+            <a [routerLink]="t[0]" routerLinkActive="!border-accent !text-fg" ariaCurrentWhenActive="page"
+               class="shrink-0 border-b-2 border-transparent px-3 pb-2.5 text-sm font-medium text-muted hover:text-fg">{{ t[1] }}</a>
+          }
+        </nav>
       </header>
       <router-outlet />
     } @else if (!error()) {
@@ -37,6 +43,7 @@ export class ProjectPage {
   private router = inject(Router);
   readonly projectId = input.required<string>();
   readonly error = signal('');
+  readonly tabs = [['board', 'Board'], ['delivery', 'Delivery'], ['forecast', 'Forecast']] as const;
 
   constructor() {
     effect(() => {
