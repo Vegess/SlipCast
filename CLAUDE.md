@@ -3,9 +3,8 @@
 Read this file fully before doing anything in this repo. It is the source of truth for
 what this project is, why it exists, and what to build next.
 
-> **Product name:** `NEWNAME` (placeholder). The repo is currently called **Plotline**.
-> The owner will pick the final name. Until then, do not rename anything.
-> When told the name, do Task 1.1 below.
+> **Product name:** **SlipCast** (display "SlipCast"; lowercase `slipcast` in identifiers,
+> keys and URLs). The repo is `Vegess/slipcast`; it was formerly called Plotline.
 
 ---
 
@@ -37,7 +36,7 @@ Our differentiation (build these with the most care):
 4. **Tool-agnostic and private.** CSV import from any tracker, no plugin to install,
    and a privacy mode that never sends ticket text to an LLM.
 
-**Pitch:** "Other tools tell you a project is late. `NEWNAME` tells you a ticket will be
+**Pitch:** "Other tools tell you a project is late. SlipCast tells you a ticket will be
 late while you're still writing it, and proves how often it's right."
 
 ### Principles
@@ -108,10 +107,10 @@ Do the tasks in order. Check off each acceptance criterion before moving on.
 
 ### Phase 1.5: Housekeeping
 
-**1.1 Rename** (only when the owner gives the name)
-- Replace "Plotline" with `NEWNAME` in the UI text, page title, README, docs,
+**1.1 Rename**
+- Replace "Plotline" with SlipCast in the UI text, page title, README, docs,
   `render.yaml` service name, the FastAPI title, and the localStorage keys
-  (`plotline_token` becomes `<newname>_token`).
+  (`plotline_token` becomes `slipcast_token`).
 - Do not rename the Python package `app` or the folder structure.
 - Acceptance: `grep -ri plotline` finds nothing except the git history note in the README.
 
@@ -238,6 +237,33 @@ Add `scikit-learn==1.5.2` to `backend/requirements.txt` and `echarts@5.5.1` to t
 - Tests use a fake LLM: one test checks that the validator rejects invented numbers,
   one checks the fallback runs on bad output, and one checks privacy mode never calls
   the LLM.
+
+### Phase 2E: Exports and data-analysis notebooks
+
+Add `openpyxl==3.1.5` to `backend/requirements.txt`. Notebook-only dependencies (jupyter,
+matplotlib, seaborn, pandas, numpy, scikit-learn) live in `notebooks/requirements.txt`
+and are never installed in the API image.
+
+- `GET /projects/{id}/export.xlsx`: an Excel workbook built with pandas and openpyxl,
+  with sheets Tickets, Status history, Cycle times, Weekly throughput, Forecast, Model
+  metrics, plus a README sheet explaining each column. Bold header row, frozen panes,
+  sensible column widths, dates as real Excel dates.
+- `GET /projects/{id}/export/bi.zip`: tidy CSVs (`tickets.csv`, `events.csv`,
+  `cycle_times.csv`, `weekly_throughput.csv`, `forecasts.csv`) for Tableau or Power BI,
+  one row per entity, ISO dates, snake_case columns.
+- `docs/bi-guide.md`: how to connect these CSVs in Tableau and Power BI, with 3
+  suggested dashboards (cycle-time control chart, throughput trend, slip rate by theme).
+- Web: "Export to Excel" and "Export for Tableau / Power BI" buttons on the Delivery tab.
+- Both endpoints use tenant-scoped lookups and get isolation tests; a test checks the
+  workbook opens with openpyxl and has the expected sheets.
+- `notebooks/01_exploratory_analysis.ipynb`: load the demo data through the backend
+  services; explore cycle-time distributions, throughput, and slip rate by type, theme
+  and owner with matplotlib/seaborn charts and short markdown commentary.
+- `notebooks/02_model_evaluation.ipynb`: reproduce the classifier, risk model,
+  reference-class coverage and Monte Carlo backtest results with charts, explaining
+  the time-based split and baselines.
+- `notebooks/README.md`: how to run them. Notebooks are saved with outputs so they
+  render on GitHub. `notebooks/` is excluded from the API Docker image.
 
 ### Phase 3: Launch
 
