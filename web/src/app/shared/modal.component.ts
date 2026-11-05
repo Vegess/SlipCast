@@ -4,7 +4,7 @@ import { Component, ElementRef, HostListener, OnInit, input, output } from '@ang
   selector: 'app-modal',
   template: `
     <div class="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center sm:p-6"
-         (mousedown)="$event.target === $event.currentTarget && closed.emit()">
+         (mousedown)="onBackdrop($event)">
       <div role="dialog" aria-modal="true" [attr.aria-label]="heading()"
            class="flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-line bg-panel shadow-2xl sm:rounded-2xl"
            [class.sm:max-w-lg]="!wide()" [class.sm:max-w-3xl]="wide()">
@@ -28,6 +28,15 @@ export class ModalComponent implements OnInit {
 
   ngOnInit() {
     setTimeout(() => this.el.nativeElement.querySelector<HTMLElement>('input, textarea, select')?.focus());
+  }
+
+  /**
+   * Close only when the press starts on the backdrop itself. This must not be an inline
+   * `a && b` template expression: when it evaluates to `false` Angular calls
+   * preventDefault() on the mousedown, and inputs inside the dialog can no longer take focus.
+   */
+  onBackdrop(ev: MouseEvent): void {
+    if (ev.target === ev.currentTarget) this.closed.emit();
   }
 
   @HostListener('document:keydown.escape')
