@@ -4,6 +4,7 @@ import { Api, errorMessage } from '../../core/api.service';
 import { KIND_LABEL, STATUSES, Status, Task } from '../../core/models';
 import { shortDate, todayISO } from '../../shared/format';
 import { ProjectContext } from './project.context';
+import { KindChip } from '../../shared/kind-chip.component';
 import { TaskDialog } from './task.dialog';
 
 interface Health {
@@ -13,10 +14,10 @@ interface Health {
 
 @Component({
   selector: 'app-board-view',
-  imports: [FormsModule, TaskDialog],
+  imports: [FormsModule, TaskDialog, KindChip],
   template: `
   @if (health(); as h) {
-    <section class="mb-5 flex flex-wrap items-start gap-x-8 gap-y-3 rounded-xl border border-line bg-panel px-5 py-4">
+    <section class="mb-5 flex flex-wrap items-start gap-x-8 gap-y-3 rounded-xl border border-line border-t-2 border-t-info/80 bg-panel px-5 py-4">
       <div>
         <p class="text-xs text-muted">Project health</p>
         <p class="font-display text-2xl font-medium" [class.text-ok]="h.health === 'on_track'"
@@ -50,9 +51,9 @@ interface Health {
                     class="block w-full rounded-lg border border-line border-l-[3px] bg-panel px-3 py-2.5 text-left hover:border-muted/60"
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
               <span class="block text-sm font-medium leading-snug">{{ t.title }}</span>
-              <span class="mt-1.5 flex flex-wrap gap-x-3 text-xs text-muted">
+              <span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
                 <span>{{ t.owner || 'Unassigned' }}</span>
-                @if (t.kind) { <span>{{ kindLabel[t.kind] }}</span> }
+                @if (t.kind) { <app-kind-chip [kind]="t.kind" /> }
                 <span [class.text-bad]="late(t)" [class.font-semibold]="late(t)">{{ late(t) ? 'Overdue · ' : '' }}{{ date(t.due) }}</span>
               </span>
             </button>

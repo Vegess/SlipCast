@@ -43,7 +43,7 @@ interface Forecast {
             12 weeks of throughput ({{ f.history_weeks.join(', ') }} tickets) until the remaining work is done.
             Committing to the 85% date means you'd hit it in 17 of 20 similar situations.
           </p>
-          <div class="card mt-5">
+          <div class="card card-accent mt-5">
             <label class="label">Check a target date
               <input class="input max-w-[200px]" type="date" [min]="today" [ngModel]="target()" (ngModelChange)="target.set($event)">
             </label>
@@ -53,13 +53,13 @@ interface Forecast {
             }
           </div>
         </section>
-        <section class="card">
+        <section class="card card-accent">
           <h3 class="section-title">Distribution of outcomes</h3>
           <p class="note">How many weeks the simulations needed.</p>
           <app-chart class="mt-3 h-64" [options]="histogram()" ariaLabel="Forecast histogram" />
         </section>
       </div>
-      <section class="card mt-5">
+      <section class="card card-accent mt-5">
         <h3 class="section-title">Burn-up</h3>
         <p class="note">Total scope versus finished work. Dashed lines project today's pace to the 50% and 85% dates; a rising scope line pushes both out.</p>
         <app-chart class="mt-3 h-72" [options]="burnup()" ariaLabel="Burn-up chart" />
@@ -67,7 +67,7 @@ interface Forecast {
     }
   }
 
-  <section class="card mt-5">
+  <section class="card card-violet mt-5">
     <h3 class="section-title">Tickets most likely to slip</h3>
     <p class="note">A logistic regression trained on your finished tickets predicts which open tickets will miss their due date, using only facts known when each ticket was created. The reasons are the factors pushing each risk up the most.</p>
     @if (risk.data(); as r) {
@@ -85,7 +85,7 @@ interface Forecast {
     }
   </section>
 
-  <section class="card mt-5">
+  <section class="card card-accent mt-5">
     <h3 class="section-title">Track record</h3>
     <p class="note">Every forecast SlipCast makes is stored and scored automatically when the work is done, so you can see how often it has really been right for this team.</p>
     @if (ledger.data(); as l) {
@@ -116,8 +116,8 @@ interface Forecast {
                     <td>
                       @if (e.void) { <span class="pill bg-raised text-muted">Void</span> }
                       @else if (!e.resolved) { <span class="pill bg-raised text-muted">Pending</span> }
-                      @else if (e.hit_p85) { <span class="pill bg-ok/15 text-ok">Hit</span> }
-                      @else { <span class="pill bg-bad/15 text-bad">Miss</span> }
+                      @else if (e.hit_p85) { <span class="pill bg-ok/15 text-ok-strong">Hit</span> }
+                      @else { <span class="pill bg-bad/15 text-bad-strong">Miss</span> }
                     </td>
                   </tr>
                 }
@@ -149,18 +149,18 @@ export class ForecastView {
       lineStyle: { color, width: 2 }, itemStyle: { color },
     });
     const ax = (name: string) => ({ type: 'value', name, min: 0, max: 1, nameLocation: 'middle', nameGap: 26,
-      axisLabel: { color: '#8E98AE', formatter: (v: number) => `${Math.round(v * 100)}%` }, splitLine: { lineStyle: { color: '#1F2638' } },
-      axisLine: { lineStyle: { color: '#262E42' } }, nameTextStyle: { color: '#8E98AE' } });
+      axisLabel: { color: '#A3AEC4', formatter: (v: number) => `${Math.round(v * 100)}%` }, splitLine: { lineStyle: { color: '#2A3650' } },
+      axisLine: { lineStyle: { color: '#34425E' } }, nameTextStyle: { color: '#A3AEC4' } });
     return baseOption({
       grid: { left: 48, right: 12, top: 30, bottom: 40 },
-      legend: { top: 0, textStyle: { color: '#8E98AE' } },
-      tooltip: { trigger: 'item', backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' },
+      legend: { top: 0, textStyle: { color: '#A3AEC4' } },
+      tooltip: { trigger: 'item', backgroundColor: '#28354F', borderColor: '#34425E', textStyle: { color: '#EEF2F8' },
         formatter: (p: { seriesName: string; data: [number, number] }) => `${p.seriesName}: said ${Math.round(p.data[0] * 100)}%, happened ${Math.round(p.data[1] * 100)}%` },
       xAxis: ax('stated probability'), yAxis: { ...ax('how often it came true'), nameGap: 36 },
       series: [
-        series('ticket_reference_class', 'Ticket durations', '#7D96F2'),
-        series('project_completion', 'Completion dates', '#F2B632'),
-        { type: 'line', symbol: 'none', silent: true, data: [[0, 0], [1, 1]], lineStyle: { color: '#8E98AE', type: 'dashed' } },
+        series('ticket_reference_class', 'Ticket durations', '#6EA8FE'),
+        series('project_completion', 'Completion dates', '#F5B83D'),
+        { type: 'line', symbol: 'none', silent: true, data: [[0, 0], [1, 1]], lineStyle: { color: '#A3AEC4', type: 'dashed' } },
       ],
     });
   });
@@ -170,10 +170,10 @@ export class ForecastView {
     if (!f?.available) return {};
     const p85 = Math.ceil(f.weeks_p85);
     return baseOption({
-      xAxis: { type: 'category', name: 'weeks', data: f.histogram.map((h) => h.week + 1), axisLabel: { color: '#8E98AE' }, axisLine: { lineStyle: { color: '#262E42' } }, nameTextStyle: { color: '#8E98AE' } },
-      yAxis: { type: 'value', axisLabel: { color: '#8E98AE', formatter: (v: number) => `${Math.round(v * 100)}%` }, splitLine: { lineStyle: { color: '#1F2638' } } },
-      tooltip: { trigger: 'axis', backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' }, valueFormatter: (v: number) => `${(v * 100).toFixed(1)}%` },
-      series: [{ type: 'bar', data: f.histogram.map((h) => ({ value: h.probability, itemStyle: { color: h.week + 1 <= p85 ? '#F2B632' : '#3A4258', borderRadius: [3, 3, 0, 0] } })) }],
+      xAxis: { type: 'category', name: 'weeks', data: f.histogram.map((h) => h.week + 1), axisLabel: { color: '#A3AEC4' }, axisLine: { lineStyle: { color: '#34425E' } }, nameTextStyle: { color: '#A3AEC4' } },
+      yAxis: { type: 'value', axisLabel: { color: '#A3AEC4', formatter: (v: number) => `${Math.round(v * 100)}%` }, splitLine: { lineStyle: { color: '#2A3650' } } },
+      tooltip: { trigger: 'axis', backgroundColor: '#28354F', borderColor: '#34425E', textStyle: { color: '#EEF2F8' }, valueFormatter: (v: number) => `${(v * 100).toFixed(1)}%` },
+      series: [{ type: 'bar', data: f.histogram.map((h) => ({ value: h.probability, itemStyle: { color: h.week + 1 <= p85 ? '#F5B83D' : '#46546F', borderRadius: [3, 3, 0, 0] } })) }],
     });
   });
 
@@ -181,16 +181,16 @@ export class ForecastView {
     const b = this.fc.data()?.burnup;
     if (!b) return {};
     const series: Record<string, unknown>[] = [
-      { name: 'Scope', type: 'line', symbol: 'none', data: b.dates.map((d, i) => [d, b.scope[i]]), lineStyle: { color: '#8E98AE' }, itemStyle: { color: '#8E98AE' } },
-      { name: 'Done', type: 'line', symbol: 'none', data: b.dates.map((d, i) => [d, b.done[i]]), lineStyle: { color: '#52B5AA', width: 2.5 }, itemStyle: { color: '#52B5AA' }, areaStyle: { color: '#52B5AA', opacity: 0.12 } },
+      { name: 'Scope', type: 'line', symbol: 'none', data: b.dates.map((d, i) => [d, b.scope[i]]), lineStyle: { color: '#A3AEC4' }, itemStyle: { color: '#A3AEC4' } },
+      { name: 'Done', type: 'line', symbol: 'none', data: b.dates.map((d, i) => [d, b.done[i]]), lineStyle: { color: '#4FD1A5', width: 2.5 }, itemStyle: { color: '#4FD1A5' }, areaStyle: { color: '#4FD1A5', opacity: 0.12 } },
     ];
     if (b.projection) {
-      series.push({ name: '50% pace', type: 'line', symbol: 'circle', data: b.projection.p50, lineStyle: { type: 'dashed', color: '#7D96F2' }, itemStyle: { color: '#7D96F2' } });
-      series.push({ name: '85% pace', type: 'line', symbol: 'circle', data: b.projection.p85, lineStyle: { type: 'dashed', color: '#F2B632' }, itemStyle: { color: '#F2B632' } });
+      series.push({ name: '50% pace', type: 'line', symbol: 'circle', data: b.projection.p50, lineStyle: { type: 'dashed', color: '#6EA8FE' }, itemStyle: { color: '#6EA8FE' } });
+      series.push({ name: '85% pace', type: 'line', symbol: 'circle', data: b.projection.p85, lineStyle: { type: 'dashed', color: '#F5B83D' }, itemStyle: { color: '#F5B83D' } });
     }
     return baseOption({
-      xAxis: { type: 'time', axisLabel: { color: '#8E98AE' }, axisLine: { lineStyle: { color: '#262E42' } }, splitLine: { show: false } },
-      yAxis: { type: 'value', axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } } },
+      xAxis: { type: 'time', axisLabel: { color: '#A3AEC4' }, axisLine: { lineStyle: { color: '#34425E' } }, splitLine: { show: false } },
+      yAxis: { type: 'value', axisLabel: { color: '#A3AEC4' }, splitLine: { lineStyle: { color: '#2A3650' } } },
       series,
     });
   });

@@ -23,11 +23,12 @@ export interface Suggestion {
   impact: 'high' | 'medium' | 'low'; source: 'llm' | 'rules';
 }
 
+/** Colours follow the active theme (Dusk values: #A3AEC4, #6EA8FE, #FF7A7A, #4FD1A5). */
 export const STATUSES: { id: Status; label: string; color: string }[] = [
-  { id: 'planned', label: 'Planned', color: '#8E98AE' },
-  { id: 'in_progress', label: 'In progress', color: '#7D96F2' },
-  { id: 'blocked', label: 'Blocked', color: '#E66C63' },
-  { id: 'done', label: 'Done', color: '#52B5AA' },
+  { id: 'planned', label: 'Planned', color: 'rgb(var(--c-muted))' },
+  { id: 'in_progress', label: 'In progress', color: 'rgb(var(--c-info))' },
+  { id: 'blocked', label: 'Blocked', color: 'rgb(var(--c-bad))' },
+  { id: 'done', label: 'Done', color: 'rgb(var(--c-ok))' },
 ];
 
 export const KIND_LABEL: Record<string, string | undefined> = {

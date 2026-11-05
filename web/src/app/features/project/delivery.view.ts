@@ -5,6 +5,7 @@ import { ProjectContext } from './project.context';
 import { KIND_LABEL } from '../../core/models';
 import { ChartComponent, PALETTE, baseOption } from '../../shared/chart.component';
 import { longDate, num, pct } from '../../shared/format';
+import { KindChip } from '../../shared/kind-chip.component';
 import { projectResource } from './loader';
 
 interface Breakdown { key: string; open: number; done: number; median_cycle_days: number | null; p85_cycle_days: number | null; slip_rate: number | null; }
@@ -20,7 +21,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
 
 @Component({
   selector: 'app-delivery-view',
-  imports: [ChartComponent, NgClass],
+  imports: [ChartComponent, NgClass, KindChip],
   template: `
   <div class="mb-5 flex flex-wrap items-center gap-2">
     <p class="note mr-auto">How work flows through this project. Export the same numbers to analyse them elsewhere.</p>
@@ -46,24 +47,24 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
       <p class="note">{{ f.reason }} Finish some tickets (or import history) to see flow metrics.</p>
     } @else {
       <div class="grid gap-5 xl:grid-cols-2">
-        <section class="card">
+        <section class="card card-info">
           <h3 class="section-title">Cycle time</h3>
           <p class="note">Each dot is a finished ticket. Lines show the 50th, 85th and 95th percentiles: use the 85th when someone asks "when will it be done?"</p>
           <app-chart class="mt-3 h-72" [options]="scatter()" ariaLabel="Cycle time scatter plot" />
         </section>
-        <section class="card">
+        <section class="card card-info">
           <h3 class="section-title">Weekly throughput</h3>
           <p class="note">Tickets finished per week. The forecast resamples the last 12 complete weeks.</p>
           <app-chart class="mt-3 h-72" [options]="throughput()" ariaLabel="Weekly throughput bar chart" />
         </section>
-        <section class="card xl:col-span-2">
+        <section class="card card-info xl:col-span-2">
           <h3 class="section-title">Cumulative flow</h3>
           <p class="note">Tickets in each status over the last 120 days. A widening in-progress or blocked band means work is piling up.</p>
           <app-chart class="mt-3 h-72" [options]="cfd()" ariaLabel="Cumulative flow diagram" />
         </section>
       </div>
 
-      <section class="card mt-5">
+      <section class="card card-info mt-5">
         <div class="flex flex-wrap items-center gap-3">
           <h3 class="section-title mr-auto">Where time goes</h3>
           <div class="flex gap-1 rounded-lg bg-canvas p-1 ring-1 ring-line" role="tablist">
@@ -79,7 +80,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
             <tbody>
               @for (r of rows(); track r.key) {
                 <tr>
-                  <td class="font-medium">{{ group() === 'kind' ? (kindLabel[r.key] ?? r.key) : r.key }}</td>
+                  <td class="font-medium">@if (group() === 'kind') { <app-kind-chip [kind]="r.key" /> } @else { {{ r.key }} }</td>
                   <td>{{ r.open }}</td><td>{{ r.done }}</td>
                   <td>{{ num(r.median_cycle_days) }} d</td><td>{{ num(r.p85_cycle_days) }} d</td>
                   <td [class.text-bad]="(r.slip_rate ?? 0) >= .5">{{ pct(r.slip_rate) }}</td>
@@ -91,7 +92,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
       </section>
 
       @if (f.aging.length) {
-        <section class="card mt-5">
+        <section class="card card-info mt-5">
           <h3 class="section-title">Aging work in progress</h3>
           <p class="note">Active tickets by age. Red ones are older than 85% of tickets your team has finished: they're unlikely to close soon without help.</p>
           <ul class="mt-3 divide-y divide-line/60">
@@ -146,14 +147,14 @@ export class DeliveryView {
     const p = f.cycle_time.percentiles;
     const line = (v: number, name: string, color: string) => ({ yAxis: v, name, lineStyle: { color, type: 'dashed' }, label: { color, formatter: `${name} ${v}d`, position: 'insideEndTop' } });
     return baseOption({
-      tooltip: { trigger: 'item', backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2', fontSize: 12 },
+      tooltip: { trigger: 'item', backgroundColor: '#28354F', borderColor: '#34425E', textStyle: { color: '#EEF2F8', fontSize: 12 },
         formatter: (x: { data: [string, number, string] }) => `${x.data[2]}<br/>${x.data[1]} days` },
-      xAxis: { type: 'time', axisLine: { lineStyle: { color: '#262E42' } }, axisLabel: { color: '#8E98AE', fontSize: 11 }, splitLine: { show: false } },
-      yAxis: { type: 'value', name: 'days', axisLabel: { color: '#8E98AE', fontSize: 11 }, splitLine: { lineStyle: { color: '#1F2638' } }, nameTextStyle: { color: '#8E98AE' } },
+      xAxis: { type: 'time', axisLine: { lineStyle: { color: '#34425E' } }, axisLabel: { color: '#A3AEC4', fontSize: 11 }, splitLine: { show: false } },
+      yAxis: { type: 'value', name: 'days', axisLabel: { color: '#A3AEC4', fontSize: 11 }, splitLine: { lineStyle: { color: '#2A3650' } }, nameTextStyle: { color: '#A3AEC4' } },
       series: kinds.map((k, i) => ({
         name: KIND_LABEL[k] ?? k, type: 'scatter', symbolSize: 6, itemStyle: { opacity: 0.75 },
         data: f.cycle_time.points.filter((pt) => pt.kind === k).map((pt) => [pt.date, pt.days, pt.title]),
-        ...(i === 0 ? { markLine: { symbol: 'none', silent: true, data: [line(p.p50, '50%', '#52B5AA'), line(p.p85, '85%', '#F2B632'), line(p.p95, '95%', '#E66C63')] } } : {}),
+        ...(i === 0 ? { markLine: { symbol: 'none', silent: true, data: [line(p.p50, '50%', '#4FD1A5'), line(p.p85, '85%', '#F5B83D'), line(p.p95, '95%', '#FF7A7A')] } } : {}),
       })),
     });
   });
@@ -162,8 +163,8 @@ export class DeliveryView {
     const f = this.flow.data();
     if (!f) return {};
     return baseOption({
-      xAxis: { type: 'category', data: f.throughput.weeks.map((w) => w.slice(5)), axisLabel: { color: '#8E98AE', fontSize: 11 }, axisLine: { lineStyle: { color: '#262E42' } } },
-      yAxis: { type: 'value', axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } } },
+      xAxis: { type: 'category', data: f.throughput.weeks.map((w) => w.slice(5)), axisLabel: { color: '#A3AEC4', fontSize: 11 }, axisLine: { lineStyle: { color: '#34425E' } } },
+      yAxis: { type: 'value', axisLabel: { color: '#A3AEC4' }, splitLine: { lineStyle: { color: '#2A3650' } } },
       series: [{ type: 'bar', name: 'Done', data: f.throughput.counts, itemStyle: { color: PALETTE[1], borderRadius: [3, 3, 0, 0] } }],
     });
   });
@@ -171,10 +172,10 @@ export class DeliveryView {
   readonly cfd = computed(() => {
     const f = this.flow.data();
     if (!f) return {};
-    const order: [string, string, string][] = [['done', 'Done', '#52B5AA'], ['blocked', 'Blocked', '#E66C63'], ['in_progress', 'In progress', '#7D96F2'], ['planned', 'Planned', '#8E98AE']];
+    const order: [string, string, string][] = [['done', 'Done', '#4FD1A5'], ['blocked', 'Blocked', '#FF7A7A'], ['in_progress', 'In progress', '#6EA8FE'], ['planned', 'Planned', '#A3AEC4']];
     return baseOption({
-      xAxis: { type: 'category', boundaryGap: false, data: f.cfd.dates.map((d) => d.slice(5)), axisLabel: { color: '#8E98AE', fontSize: 11 }, axisLine: { lineStyle: { color: '#262E42' } } },
-      yAxis: { type: 'value', axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } } },
+      xAxis: { type: 'category', boundaryGap: false, data: f.cfd.dates.map((d) => d.slice(5)), axisLabel: { color: '#A3AEC4', fontSize: 11 }, axisLine: { lineStyle: { color: '#34425E' } } },
+      yAxis: { type: 'value', axisLabel: { color: '#A3AEC4' }, splitLine: { lineStyle: { color: '#2A3650' } } },
       series: order.map(([k, name, color]) => ({
         name, type: 'line', stack: 'flow', symbol: 'none', smooth: false, data: f.cfd.series[k],
         lineStyle: { width: 0 }, areaStyle: { color, opacity: k === 'done' ? 0.35 : 0.85 }, itemStyle: { color },

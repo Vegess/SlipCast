@@ -2,6 +2,7 @@ import { Component, computed } from '@angular/core';
 import { KIND_LABEL } from '../../core/models';
 import { ChartComponent, baseOption } from '../../shared/chart.component';
 import { num } from '../../shared/format';
+import { KIND_STYLE, KindChip } from '../../shared/kind-chip.component';
 import { projectResource } from './loader';
 
 interface TextInsights {
@@ -14,12 +15,12 @@ interface TextInsights {
 
 @Component({
   selector: 'app-text-view',
-  imports: [ChartComponent],
+  imports: [ChartComponent, KindChip],
   template: `
   @if (res.error()) { <p class="text-sm text-bad">{{ res.error() }}</p> }
   @if (res.data(); as d) {
     <div class="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-      <section class="card">
+      <section class="card card-violet">
         <h3 class="section-title">Themes found in ticket text</h3>
         <p class="note">K-means clustering on TF-IDF vectors groups tickets by what they talk about, with no manual tagging. Names are each cluster's strongest words.</p>
         @if (!d.topics.available) { <p class="note mt-3">{{ d.topics.reason }}</p> } @else {
@@ -37,7 +38,7 @@ interface TextInsights {
       </section>
 
       <div class="grid content-start gap-5">
-        <section class="card">
+        <section class="card card-violet">
           <h3 class="section-title">Ticket types</h3>
           <p class="note">
             @if (d.types.classifier_available) { {{ d.types.predicted }} unlabelled tickets were typed by the text classifier. }
@@ -45,15 +46,15 @@ interface TextInsights {
           </p>
           <ul class="mt-3 space-y-2 text-sm">
             @for (k of typeRows(); track k.key) {
-              <li class="grid grid-cols-[90px_1fr_36px] items-center gap-3">
-                <span>{{ k.label }}</span>
-                <span class="h-2 overflow-hidden rounded-full bg-raised"><span class="block h-full rounded-full bg-info" [style.width.%]="k.share"></span></span>
+              <li class="grid grid-cols-[110px_1fr_36px] items-center gap-3">
+                <span><app-kind-chip [kind]="k.key" /></span>
+                <span class="h-2 overflow-hidden rounded-full bg-raised"><span class="block h-full rounded-full" [class]="kindStyle[k.key]?.dot ?? 'bg-muted'" [style.width.%]="k.share"></span></span>
                 <span class="text-right text-muted">{{ k.count }}</span>
               </li>
             }
           </ul>
         </section>
-        <section class="card">
+        <section class="card card-violet">
           <h3 class="section-title">Weakest open tickets</h3>
           <p class="note">Average open-ticket quality: <b class="text-fg">{{ num(d.quality.average_open, 0) }}/100</b>. Vague tickets take longer and slip more often.</p>
           <ul class="mt-3 divide-y divide-line/60">
@@ -68,7 +69,7 @@ interface TextInsights {
       </div>
     </div>
 
-    <section class="card mt-5">
+    <section class="card card-violet mt-5">
       <h3 class="section-title">Likely duplicates</h3>
       <p class="note">Pairs whose text is at least 72% similar (cosine similarity of TF-IDF vectors). Open tickets are listed first.</p>
       @if (!d.duplicates.length) { <p class="note mt-3">No likely duplicates found.</p> } @else {
@@ -93,6 +94,7 @@ interface TextInsights {
 export class TextView {
   readonly res = projectResource<TextInsights>((id) => `/projects/${id}/analytics/text`);
   readonly num = num;
+  readonly kindStyle = KIND_STYLE;
 
   readonly typeRows = computed(() => {
     const c = this.res.data()?.types.counts ?? {};
@@ -105,10 +107,10 @@ export class TextView {
       .sort((a, b) => (a.median_cycle_days ?? 0) - (b.median_cycle_days ?? 0));
     return baseOption({
       grid: { left: 150, right: 24, top: 8, bottom: 40 },
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' } },
-      xAxis: { type: 'value', name: 'median cycle time (days)', nameLocation: 'middle', nameGap: 24, axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } }, nameTextStyle: { color: '#8E98AE' } },
-      yAxis: { type: 'category', data: items.map((t) => t.name), axisLabel: { color: '#E5E9F2', fontSize: 11 }, axisLine: { lineStyle: { color: '#262E42' } } },
-      series: [{ type: 'bar', data: items.map((t) => t.median_cycle_days), itemStyle: { color: '#7D96F2', borderRadius: [0, 3, 3, 0] }, barMaxWidth: 18 }],
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#28354F', borderColor: '#34425E', textStyle: { color: '#EEF2F8' } },
+      xAxis: { type: 'value', name: 'median cycle time (days)', nameLocation: 'middle', nameGap: 24, axisLabel: { color: '#A3AEC4' }, splitLine: { lineStyle: { color: '#2A3650' } }, nameTextStyle: { color: '#A3AEC4' } },
+      yAxis: { type: 'category', data: items.map((t) => t.name), axisLabel: { color: '#EEF2F8', fontSize: 11 }, axisLine: { lineStyle: { color: '#34425E' } } },
+      series: [{ type: 'bar', data: items.map((t) => t.median_cycle_days), itemStyle: { color: '#6EA8FE', borderRadius: [0, 3, 3, 0] }, barMaxWidth: 18 }],
     });
   });
 }

@@ -34,7 +34,7 @@ import { ProjectContext } from './project.context';
         @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
       </form>
 
-      <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Ticket check">
+      <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line border-t-2 border-t-violet/80 bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Ticket check">
         <div>
           <p class="text-xs font-medium uppercase tracking-wide text-muted">Ticket check</p>
           <p class="mt-1 text-xs text-muted">Compared with this project's history as you type. It never blocks saving.</p>

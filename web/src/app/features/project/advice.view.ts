@@ -38,7 +38,7 @@ interface Advice {
         @if (a.error) { <p class="mt-2 text-xs text-accent">{{ a.error }} Showing rule-based suggestions instead.</p> }
         <ul class="mt-4 space-y-3">
           @for (s of a.suggestions; track s.key) {
-            <li class="card p-4">
+            <li class="card card-violet p-4">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="pill" [ngClass]="impactClass[s.impact]">{{ s.impact }} impact</span>
                 <span class="pill bg-raised text-muted">{{ s.source === 'llm' ? 'AI · validated' : 'Rule-based' }}</span>
@@ -56,7 +56,7 @@ interface Advice {
         </ul>
       }
 
-      <section class="card mt-6">
+      <section class="card card-violet mt-6">
         <div class="flex flex-wrap items-center gap-3">
           <h3 class="section-title mr-auto">Weekly status report</h3>
           @if (report()) { <button class="btn btn-ghost" (click)="copy()">{{ copied() ? 'Copied' : 'Copy' }}</button> }
@@ -68,7 +68,7 @@ interface Advice {
       </section>
     </section>
 
-    <aside class="card h-fit">
+    <aside class="card card-info h-fit">
       <h3 class="section-title">Findings</h3>
       <p class="note">Computed by statistics and models, not by the AI.</p>
       @if (advice(); as a) {
@@ -88,7 +88,7 @@ export class AdviceView {
   private api = inject(Api);
   private ctx = inject(ProjectContext);
   readonly store = inject(WorkspaceStore);
-  readonly impactClass = { high: 'bg-bad/15 text-bad', medium: 'bg-accent/15 text-accent', low: 'bg-raised text-muted' };
+  readonly impactClass = { high: 'bg-bad/15 text-bad-strong', medium: 'bg-accent/15 text-accent-strong', low: 'bg-raised text-muted' };
   readonly advice = signal<Advice | null>(null);
   readonly busy = signal(false);
   readonly error = signal('');

@@ -17,11 +17,11 @@ import { AuthService } from '../../core/auth.service';
           work actually flows through your team, and where it gets stuck.
         </p>
         <svg viewBox="0 0 520 220" class="mt-10 hidden w-full max-w-lg sm:block" aria-hidden="true">
-          <path d="M0 200 L60 182 L120 170 L180 150 L240 138 L300 112 L360 96" fill="none" stroke="#E5E9F2" stroke-width="3" stroke-linecap="round"/>
-          <path d="M360 96 L420 70 L480 52 L520 40 L520 92 L480 96 L420 104 L360 96 Z" fill="#F2B632" fill-opacity=".14"/>
-          <path d="M360 96 L420 84 L480 72 L520 64" fill="none" stroke="#F2B632" stroke-width="2.5" stroke-dasharray="6 6"/>
+          <path d="M0 200 L60 182 L120 170 L180 150 L240 138 L300 112 L360 96" fill="none" class="stroke-fg" stroke-width="3" stroke-linecap="round"/>
+          <path d="M360 96 L420 70 L480 52 L520 40 L520 92 L480 96 L420 104 L360 96 Z" class="fill-accent" fill-opacity=".14"/>
+          <path d="M360 96 L420 84 L480 72 L520 64" fill="none" class="stroke-accent" stroke-width="2.5" stroke-dasharray="6 6"/>
           @for (p of pins; track $index) {
-            <circle [attr.cx]="p[0]" [attr.cy]="p[1]" r="6" fill="#0D1220" [attr.stroke]="p[2]" stroke-width="2.5"/>
+            <circle [attr.cx]="p[0]" [attr.cy]="p[1]" r="6" [attr.class]="'fill-canvas ' + p[2]" stroke-width="2.5"/>
           }
           
         </svg>
@@ -65,7 +65,7 @@ export class AuthPage {
   readonly busy = signal(false);
   readonly error = signal('');
   name = ''; email = ''; password = '';
-  readonly pins: [number, number, string][] = [[60, 182, '#52B5AA'], [180, 150, '#52B5AA'], [300, 112, '#7D96F2'], [360, 96, '#F2B632']];
+  readonly pins: [number, number, string][] = [[60, 182, 'stroke-ok'], [180, 150, 'stroke-ok'], [300, 112, 'stroke-info'], [360, 96, 'stroke-accent']];
 
   toggle() { this.mode.set(this.mode() === 'signin' ? 'register' : 'signin'); this.error.set(''); }
 

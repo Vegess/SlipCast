@@ -30,7 +30,7 @@ interface Evaluation {
   @if (res.error()) { <p class="text-sm text-bad">{{ res.error() }}</p> }
   @if (res.data(); as e) {
     <!-- classifier -->
-    <section class="card">
+    <section class="card card-violet">
       <h3 class="section-title">Ticket type classifier <span class="note font-normal">· TF-IDF + logistic regression</span></h3>
       @if (!e.classifier.available) { <p class="note mt-2">{{ e.classifier.reason }}</p> } @else {
         @let c = e.classifier;
@@ -60,7 +60,7 @@ interface Evaluation {
     </section>
 
     <!-- risk -->
-    <section class="card mt-5">
+    <section class="card card-violet mt-5">
       <h3 class="section-title">Slip-risk model <span class="note font-normal">· logistic regression on ticket, text and workload features</span></h3>
       @if (!e.risk.available) { <p class="note mt-2">{{ e.risk.reason }}</p> } @else {
         @let r = e.risk;
@@ -88,7 +88,7 @@ interface Evaluation {
     </section>
 
     <!-- backtest -->
-    <section class="card mt-5">
+    <section class="card card-violet mt-5">
       <h3 class="section-title">Forecast backtest <span class="note font-normal">· Monte Carlo replayed at past dates</span></h3>
       @if (!e.forecast_backtest.available) { <p class="note mt-2">{{ e.forecast_backtest.reason }}</p> } @else {
         @let b = e.forecast_backtest;
@@ -103,7 +103,7 @@ interface Evaluation {
 
     <!-- reference class + ledger -->
     <div class="mt-5 grid gap-5 lg:grid-cols-2">
-      <section class="card">
+      <section class="card card-violet">
         <h3 class="section-title">Reference-class forecasts <span class="note font-normal">· TF-IDF nearest finished tickets</span></h3>
         @if (!e.reference_class.available) { <p class="note mt-2">{{ e.reference_class.reason }}</p> } @else {
           @let rc = e.reference_class;
@@ -114,7 +114,7 @@ interface Evaluation {
           <p class="note mt-3">Baseline: {{ rc.baseline?.name }}. {{ rc.evaluated }} test tickets, {{ rc.split }}.</p>
         }
       </section>
-      <section class="card">
+      <section class="card card-violet">
         <h3 class="section-title">Forecast ledger <span class="note font-normal">· every forecast, scored when the work finished</span></h3>
         @if (!e.ledger.available) { <p class="note mt-2">{{ e.ledger.reason }}</p> } @else {
           <div class="mt-4 grid grid-cols-3 gap-4">
@@ -129,7 +129,7 @@ interface Evaluation {
 
     <!-- topics + advice -->
     <div class="mt-5 grid gap-5 lg:grid-cols-2">
-      <section class="card">
+      <section class="card card-violet">
         <h3 class="section-title">Theme clustering</h3>
         @if (e.topics.available) {
           <p class="mt-3"><span class="stat-value">{{ num(e.topics.silhouette, 2) }}</span></p>
@@ -137,7 +137,7 @@ interface Evaluation {
         } @else { <p class="note mt-2">Not enough text to cluster yet.</p> }
       </section>
       @if (e.advice; as adv) {
-      <section class="card">
+      <section class="card card-violet">
         <h3 class="section-title">AI advice quality</h3>
         <div class="mt-3 grid grid-cols-2 gap-4">
           <div><p class="stat-value">{{ adv.grounding_pass_rate === null ? '—' : pct(adv.grounding_pass_rate) }}</p><p class="note mt-1">AI suggestions that passed the grounding check ({{ adv.accepted }}/{{ adv.generated }})</p></div>
@@ -159,8 +159,8 @@ export class EvaluationView {
   }
 
   private axes(xName: string, yName: string, max = 1) {
-    const ax = (name: string) => ({ type: 'value', name, min: 0, max, nameLocation: 'middle', nameGap: 26, axisLabel: { color: '#8E98AE', fontSize: 10 },
-      splitLine: { lineStyle: { color: '#1F2638' } }, axisLine: { lineStyle: { color: '#262E42' } }, nameTextStyle: { color: '#8E98AE', fontSize: 11 } });
+    const ax = (name: string) => ({ type: 'value', name, min: 0, max, nameLocation: 'middle', nameGap: 26, axisLabel: { color: '#A3AEC4', fontSize: 10 },
+      splitLine: { lineStyle: { color: '#2A3650' } }, axisLine: { lineStyle: { color: '#34425E' } }, nameTextStyle: { color: '#A3AEC4', fontSize: 11 } });
     return { xAxis: ax(xName), yAxis: { ...ax(yName), nameGap: 30 }, grid: { left: 44, right: 12, top: 12, bottom: 40 } };
   }
 
@@ -173,12 +173,12 @@ export class EvaluationView {
     const max = Math.max(...data.map((d) => d[2]), 1);
     return baseOption({
       grid: { left: 80, right: 12, top: 8, bottom: 40 },
-      tooltip: { trigger: 'item', backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' },
+      tooltip: { trigger: 'item', backgroundColor: '#28354F', borderColor: '#34425E', textStyle: { color: '#EEF2F8' },
         formatter: (p: { data: [number, number, number] }) => `True ${labels[labels.length - 1 - p.data[1]]}, predicted ${labels[p.data[0]]}: ${p.data[2]}` },
-      xAxis: { type: 'category', data: labels, name: 'predicted', nameLocation: 'middle', nameGap: 26, axisLabel: { color: '#8E98AE' }, nameTextStyle: { color: '#8E98AE' }, axisLine: { lineStyle: { color: '#262E42' } } },
-      yAxis: { type: 'category', data: [...labels].reverse(), axisLabel: { color: '#8E98AE' }, axisLine: { lineStyle: { color: '#262E42' } } },
-      visualMap: { show: false, min: 0, max, inRange: { color: ['#141A29', '#7D96F2'] } },
-      series: [{ type: 'heatmap', data, label: { show: true, color: '#E5E9F2' }, itemStyle: { borderColor: '#0D1220', borderWidth: 2 } }],
+      xAxis: { type: 'category', data: labels, name: 'predicted', nameLocation: 'middle', nameGap: 26, axisLabel: { color: '#A3AEC4' }, nameTextStyle: { color: '#A3AEC4' }, axisLine: { lineStyle: { color: '#34425E' } } },
+      yAxis: { type: 'category', data: [...labels].reverse(), axisLabel: { color: '#A3AEC4' }, axisLine: { lineStyle: { color: '#34425E' } } },
+      visualMap: { show: false, min: 0, max, inRange: { color: ['#1F2A40', '#6EA8FE'] } },
+      series: [{ type: 'heatmap', data, label: { show: true, color: '#EEF2F8' }, itemStyle: { borderColor: '#172033', borderWidth: 2 } }],
     });
   });
 
@@ -187,8 +187,8 @@ export class EvaluationView {
     if (!r?.available) return {};
     return baseOption({ ...this.axes('false positive rate', 'true positive rate'), tooltip: { show: false },
       series: [
-        { type: 'line', symbol: 'none', data: r.roc_curve, lineStyle: { color: '#52B5AA', width: 2.5 }, areaStyle: { color: '#52B5AA', opacity: 0.1 } },
-        { type: 'line', symbol: 'none', data: [[0, 0], [1, 1]], lineStyle: { color: '#8E98AE', type: 'dashed' } },
+        { type: 'line', symbol: 'none', data: r.roc_curve, lineStyle: { color: '#4FD1A5', width: 2.5 }, areaStyle: { color: '#4FD1A5', opacity: 0.1 } },
+        { type: 'line', symbol: 'none', data: [[0, 0], [1, 1]], lineStyle: { color: '#A3AEC4', type: 'dashed' } },
       ] });
   });
 
@@ -197,8 +197,8 @@ export class EvaluationView {
     if (!r?.available) return {};
     return baseOption({ ...this.axes('recall', 'precision'), tooltip: { show: false },
       series: [
-        { type: 'line', symbol: 'none', data: r.pr_curve, lineStyle: { color: '#7D96F2', width: 2.5 } },
-        { type: 'line', symbol: 'none', data: [[0, r.base_rate], [1, r.base_rate]], lineStyle: { color: '#8E98AE', type: 'dashed' } },
+        { type: 'line', symbol: 'none', data: r.pr_curve, lineStyle: { color: '#6EA8FE', width: 2.5 } },
+        { type: 'line', symbol: 'none', data: [[0, r.base_rate], [1, r.base_rate]], lineStyle: { color: '#A3AEC4', type: 'dashed' } },
       ] });
   });
 
@@ -207,8 +207,8 @@ export class EvaluationView {
     if (!r?.available) return {};
     return baseOption({ ...this.axes('predicted risk', 'observed late rate'), tooltip: { show: false },
       series: [
-        { type: 'line', symbol: 'circle', symbolSize: 7, data: r.calibration, lineStyle: { color: '#F2B632', width: 2 }, itemStyle: { color: '#F2B632' } },
-        { type: 'line', symbol: 'none', data: [[0, 0], [1, 1]], lineStyle: { color: '#8E98AE', type: 'dashed' } },
+        { type: 'line', symbol: 'circle', symbolSize: 7, data: r.calibration, lineStyle: { color: '#F5B83D', width: 2 }, itemStyle: { color: '#F5B83D' } },
+        { type: 'line', symbol: 'none', data: [[0, 0], [1, 1]], lineStyle: { color: '#A3AEC4', type: 'dashed' } },
       ] });
   });
 
@@ -217,12 +217,12 @@ export class EvaluationView {
     if (!b?.available) return {};
     const x = b.points.map((p) => p.cutoff.slice(5));
     return baseOption({
-      xAxis: { type: 'category', data: x, axisLabel: { color: '#8E98AE' }, axisLine: { lineStyle: { color: '#262E42' } } },
-      yAxis: { type: 'value', name: 'weeks', axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } }, nameTextStyle: { color: '#8E98AE' } },
+      xAxis: { type: 'category', data: x, axisLabel: { color: '#A3AEC4' }, axisLine: { lineStyle: { color: '#34425E' } } },
+      yAxis: { type: 'value', name: 'weeks', axisLabel: { color: '#A3AEC4' }, splitLine: { lineStyle: { color: '#2A3650' } }, nameTextStyle: { color: '#A3AEC4' } },
       series: [
-        { name: '85% forecast', type: 'line', symbol: 'none', data: b.points.map((p) => p.p85_weeks), lineStyle: { color: '#F2B632', type: 'dashed' }, itemStyle: { color: '#F2B632' } },
-        { name: '50% forecast', type: 'line', symbol: 'none', data: b.points.map((p) => p.p50_weeks), lineStyle: { color: '#7D96F2', type: 'dashed' }, itemStyle: { color: '#7D96F2' } },
-        { name: 'Actual', type: 'line', symbolSize: 7, data: b.points.map((p) => ({ value: p.actual_weeks, itemStyle: { color: p.hit_p85 ? '#52B5AA' : '#E66C63' } })), lineStyle: { color: '#E5E9F2' } },
+        { name: '85% forecast', type: 'line', symbol: 'none', data: b.points.map((p) => p.p85_weeks), lineStyle: { color: '#F5B83D', type: 'dashed' }, itemStyle: { color: '#F5B83D' } },
+        { name: '50% forecast', type: 'line', symbol: 'none', data: b.points.map((p) => p.p50_weeks), lineStyle: { color: '#6EA8FE', type: 'dashed' }, itemStyle: { color: '#6EA8FE' } },
+        { name: 'Actual', type: 'line', symbolSize: 7, data: b.points.map((p) => ({ value: p.actual_weeks, itemStyle: { color: p.hit_p85 ? '#4FD1A5' : '#FF7A7A' } })), lineStyle: { color: '#EEF2F8' } },
       ],
     });
   });

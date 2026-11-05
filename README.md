@@ -89,6 +89,17 @@ and the forecast ledger.
 |---|---|---|
 | ![Board](docs/screenshots/board.png) | ![Import report](docs/screenshots/import.png) | ![Sign in](docs/screenshots/sign-in.png) |
 
+### Themes
+A soft, colourful **Dusk** dark theme by default and a **Light** theme, switchable in the
+sidebar and remembered per browser. Text meets WCAG AA contrast (4.5:1) in both. Cards carry a
+thin colour edge by kind (blue for analytics, violet for AI and models, amber for forecasts),
+and ticket types have colour chips.
+
+| Before (1.0) | Dusk | Light |
+|---|---|---|
+| ![Board before](docs/screenshots/ui-refresh/board-before.png) | ![Board, Dusk](docs/screenshots/ui-refresh/board-after.png) | ![Board, light](docs/screenshots/ui-refresh/board-light.png) |
+| ![Sign in before](docs/screenshots/ui-refresh/sign-in-before.png) | ![Sign in, Dusk](docs/screenshots/ui-refresh/sign-in-after.png) | ![Sign in, light](docs/screenshots/ui-refresh/sign-in-light.png) |
+
 ## Evaluation results
 
 On the demo project (430 tickets over six months), using **time-based splits**: train on

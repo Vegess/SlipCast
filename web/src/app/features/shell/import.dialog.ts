@@ -40,7 +40,7 @@ interface ImportReport {
         </div>
         @if (r.skipped) {
           <p class="text-sm">Skipped because:
-            @for (e of entries(r.skipped_reasons); track e[0]) { <span class="pill mr-1 bg-bad/15 text-bad">{{ e[0] }}: {{ e[1] }}</span> }
+            @for (e of entries(r.skipped_reasons); track e[0]) { <span class="pill mr-1 bg-bad/15 text-bad-strong">{{ e[0] }}: {{ e[1] }}</span> }
           </p>
         }
         <div>
