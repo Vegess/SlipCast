@@ -19,6 +19,13 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:4200"
 
+    # Optional LLM advice layer. Without a key, rule-based advice is used everywhere.
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
+    groq_url: str = "https://api.groq.com/openai/v1/chat/completions"
+    advice_per_minute: int = 6
+    advice_per_day: int = 100
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

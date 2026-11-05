@@ -154,3 +154,37 @@ class Forecast(Base):
     actual_days: Mapped[float | None] = mapped_column(Float, nullable=True)
     hit_p85: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     void: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class AdviceLog(Base):
+    """One advice request: what the LLM produced and how much survived validation."""
+
+    __tablename__ = "advice_logs"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    kind: Mapped[str] = mapped_column(String(20))  # suggestions | report | rewrite
+    provider: Mapped[str] = mapped_column(String(20))  # groq | rules | template
+    llm_called: Mapped[bool] = mapped_column(Boolean, default=False)
+    privacy_mode: Mapped[bool] = mapped_column(Boolean, default=False)
+    generated: Mapped[int] = mapped_column(Integer, default=0)
+    accepted: Mapped[int] = mapped_column(Integer, default=0)
+    rejected: Mapped[int] = mapped_column(Integer, default=0)
+    error: Mapped[str] = mapped_column(String(300), default="")
+
+
+class AdviceFeedback(Base):
+    """Helpful / not helpful votes on suggestions, one per user per suggestion."""
+
+    __tablename__ = "advice_feedback"
+    __table_args__ = (UniqueConstraint("project_id", "user_id", "suggestion_key", name="uq_advice_feedback"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    suggestion_key: Mapped[str] = mapped_column(String(40))
+    source: Mapped[str] = mapped_column(String(10))  # llm | rules
+    helpful: Mapped[bool] = mapped_column(Boolean)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

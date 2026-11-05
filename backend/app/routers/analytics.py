@@ -99,7 +99,9 @@ def evaluation(project_id: str, user: User = Depends(get_current_user), db: Sess
     analysis = get_analysis(db, project.id)
     ledger_summary = ledger.summary(db, analysis)
     ledger_summary.pop("entries")
-    return {**analysis.evaluation, "ledger": ledger_summary}
+    from app.routers.advice import advice_stats
+
+    return {**analysis.evaluation, "ledger": ledger_summary, "advice": advice_stats(db, project.id)}
 
 
 @router.get("/tasks/{task_id}/analysis")
