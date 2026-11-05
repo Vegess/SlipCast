@@ -43,7 +43,7 @@ export class ProjectPage {
   private router = inject(Router);
   readonly projectId = input.required<string>();
   readonly error = signal('');
-  readonly tabs = [['board', 'Board'], ['delivery', 'Delivery'], ['forecast', 'Forecast']] as const;
+  readonly tabs = [['board', 'Board'], ['delivery', 'Delivery'], ['forecast', 'Forecast'], ['text', 'Text insights'], ['evaluation', 'Model evaluation']] as const;
 
   constructor() {
     effect(() => {

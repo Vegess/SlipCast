@@ -104,9 +104,9 @@ export class TextView {
     const items = [...(this.res.data()?.topics.items ?? [])].filter((t) => t.median_cycle_days !== null)
       .sort((a, b) => (a.median_cycle_days ?? 0) - (b.median_cycle_days ?? 0));
     return baseOption({
-      grid: { left: 150, right: 24, top: 8, bottom: 24 },
+      grid: { left: 150, right: 24, top: 8, bottom: 40 },
       tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: '#1B2235', borderColor: '#262E42', textStyle: { color: '#E5E9F2' } },
-      xAxis: { type: 'value', name: 'median days', axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } }, nameTextStyle: { color: '#8E98AE' } },
+      xAxis: { type: 'value', name: 'median cycle time (days)', nameLocation: 'middle', nameGap: 24, axisLabel: { color: '#8E98AE' }, splitLine: { lineStyle: { color: '#1F2638' } }, nameTextStyle: { color: '#8E98AE' } },
       yAxis: { type: 'category', data: items.map((t) => t.name), axisLabel: { color: '#E5E9F2', fontSize: 11 }, axisLine: { lineStyle: { color: '#262E42' } } },
       series: [{ type: 'bar', data: items.map((t) => t.median_cycle_days), itemStyle: { color: '#7D96F2', borderRadius: [0, 3, 3, 0] }, barMaxWidth: 18 }],
     });

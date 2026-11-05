@@ -14,7 +14,11 @@ interface Evaluation {
     roc_curve: [number, number][]; pr_curve: [number, number][]; calibration: [number, number][]; weights: { feature: string; weight: number }[] };
   forecast_backtest: { available: boolean; reason?: string; batch_size: number; p85_hit_rate: number; p50_mean_abs_error_days: number;
     points: { cutoff: string; actual_weeks: number; p50_weeks: number; p85_weeks: number; hit_p85: boolean }[] };
-  advice: { generated: number; accepted: number; rejected: number; grounding_pass_rate: number | null; feedback: Record<string, { helpful: number; not_helpful: number; helpful_rate: number | null }> };
+  reference_class: { available: boolean; reason: string; split?: string; train_size?: number; test_size?: number; evaluated?: number;
+    coverage_p10_p90?: number; target_coverage?: number; p50_mae_days?: number; baseline?: { name: string; p50_mae_days: number } };
+  ledger: { available: boolean; reason: string; total: number; resolved: number; unresolved: number; hit_rate: number | null;
+    project: { resolved: number; hit_rate_p85: number | null }; ticket: { resolved: number; hit_rate_p85: number | null; coverage_p10_p90: number | null } };
+  advice?: { generated: number; accepted: number; rejected: number; grounding_pass_rate: number | null; feedback: Record<string, { helpful: number; not_helpful: number; helpful_rate: number | null }> };
 }
 
 @Component({
@@ -97,6 +101,32 @@ interface Evaluation {
       }
     </section>
 
+    <!-- reference class + ledger -->
+    <div class="mt-5 grid gap-5 lg:grid-cols-2">
+      <section class="card">
+        <h3 class="section-title">Reference-class forecasts <span class="note font-normal">· TF-IDF nearest finished tickets</span></h3>
+        @if (!e.reference_class.available) { <p class="note mt-2">{{ e.reference_class.reason }}</p> } @else {
+          @let rc = e.reference_class;
+          <div class="mt-4 grid grid-cols-2 gap-4">
+            <div><p class="stat-value" [class.text-ok]="(rc.coverage_p10_p90 ?? 0) >= .7">{{ pct(rc.coverage_p10_p90) }}</p><p class="note mt-1">of newer tickets finished inside their "similar tickets took X–Y days" range (target ≈80%)</p></div>
+            <div><p class="stat-value">{{ num(rc.p50_mae_days) }}<span class="text-base text-muted"> d</span></p><p class="note mt-1">typical miss of the middle estimate · baseline {{ num(rc.baseline?.p50_mae_days) }} d</p></div>
+          </div>
+          <p class="note mt-3">Baseline: {{ rc.baseline?.name }}. {{ rc.evaluated }} test tickets, {{ rc.split }}.</p>
+        }
+      </section>
+      <section class="card">
+        <h3 class="section-title">Forecast ledger <span class="note font-normal">· every forecast, scored when the work finished</span></h3>
+        @if (!e.ledger.available) { <p class="note mt-2">{{ e.ledger.reason }}</p> } @else {
+          <div class="mt-4 grid grid-cols-3 gap-4">
+            <div><p class="stat-value">{{ pct(e.ledger.hit_rate) }}</p><p class="note mt-1">within the 85% estimate ({{ e.ledger.resolved }} scored)</p></div>
+            <div><p class="stat-value">{{ pct(e.ledger.ticket.coverage_p10_p90) }}</p><p class="note mt-1">tickets inside their range</p></div>
+            <div><p class="stat-value">{{ e.ledger.unresolved }}</p><p class="note mt-1">still pending</p></div>
+          </div>
+          <p class="note mt-3">Unlike the backtests above, these are the forecasts users actually saw, scored against what happened next.</p>
+        }
+      </section>
+    </div>
+
     <!-- topics + advice -->
     <div class="mt-5 grid gap-5 lg:grid-cols-2">
       <section class="card">
@@ -106,14 +136,16 @@ interface Evaluation {
           <p class="note mt-1">Cosine silhouette score for {{ e.topics.count }} themes; k was chosen automatically by maximising it. Short ticket text usually scores 0.1–0.3, so treat themes as a guide, not ground truth.</p>
         } @else { <p class="note mt-2">Not enough text to cluster yet.</p> }
       </section>
+      @if (e.advice; as adv) {
       <section class="card">
         <h3 class="section-title">AI advice quality</h3>
         <div class="mt-3 grid grid-cols-2 gap-4">
-          <div><p class="stat-value">{{ e.advice.grounding_pass_rate === null ? '—' : pct(e.advice.grounding_pass_rate) }}</p><p class="note mt-1">AI suggestions that passed the grounding check ({{ e.advice.accepted }}/{{ e.advice.generated }})</p></div>
+          <div><p class="stat-value">{{ adv.grounding_pass_rate === null ? '—' : pct(adv.grounding_pass_rate) }}</p><p class="note mt-1">AI suggestions that passed the grounding check ({{ adv.accepted }}/{{ adv.generated }})</p></div>
           <div><p class="stat-value">{{ helpful('llm') }}</p><p class="note mt-1">rated helpful (AI) · rules: {{ helpful('rules') }}</p></div>
         </div>
         <p class="note mt-3">The grounding check rejects any suggestion that cites no finding or uses a number that isn't in the findings.</p>
       </section>
+      }
     </div>
   } @else if (!res.error()) { <p class="note">Evaluating models…</p> }`,
 })
@@ -122,7 +154,7 @@ export class EvaluationView {
   readonly num = num; readonly pct = pct;
   kind(k: string) { return KIND_LABEL[k] ?? k; }
   helpful(src: string) {
-    const f = this.res.data()?.advice.feedback[src];
+    const f = this.res.data()?.advice?.feedback[src];
     return f?.helpful_rate === null || f === undefined ? '—' : pct(f.helpful_rate);
   }
 

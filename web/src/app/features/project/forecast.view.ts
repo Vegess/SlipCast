@@ -4,6 +4,7 @@ import { ChartComponent, baseOption } from '../../shared/chart.component';
 import { longDate, pct, shortDate, todayISO } from '../../shared/format';
 import { projectResource } from './loader';
 
+interface RiskList { available: boolean; reason?: string; unscored?: number; items: { id: string; title: string; owner: string; status: string; due: string; risk: number; factors: string[] }[]; }
 interface Ledger {
   available: boolean; reason: string; total: number; resolved: number; unresolved: number; void: number; hit_rate: number | null;
   project: { resolved: number; hit_rate_p85: number | null };
@@ -67,6 +68,24 @@ interface Forecast {
   }
 
   <section class="card mt-5">
+    <h3 class="section-title">Tickets most likely to slip</h3>
+    <p class="note">A logistic regression trained on your finished tickets predicts which open tickets will miss their due date, using only facts known when each ticket was created. The reasons are the factors pushing each risk up the most.</p>
+    @if (risk.data(); as r) {
+      @if (!r.available) { <p class="note mt-3">{{ r.reason }}</p> } @else {
+        <ul class="mt-3 divide-y divide-line/60">
+          @for (t of r.items.slice(0, 12); track t.id) {
+            <li class="flex gap-4 py-2.5 text-sm">
+              <span class="w-12 shrink-0 font-display text-lg" [class.text-bad]="t.risk >= .6" [class.text-accent]="t.risk >= .35 && t.risk < .6" [class.text-ok]="t.risk < .35">{{ (t.risk * 100).toFixed(0) }}%</span>
+              <div class="min-w-0"><p class="font-medium">{{ t.title }}</p><p class="text-muted">{{ t.owner || 'Unassigned' }} · due {{ longDate(t.due) }} · {{ t.factors.join(' · ') || 'no single dominant factor' }}</p></div>
+            </li>
+          } @empty { <li class="py-2 text-sm text-muted">No open tickets with due dates.</li> }
+        </ul>
+        @if (r.unscored) { <p class="note mt-2">{{ r.unscored }} open tickets have no due date, so they can't be late and aren't scored.</p> }
+      }
+    }
+  </section>
+
+  <section class="card mt-5">
     <h3 class="section-title">Track record</h3>
     <p class="note">Every forecast SlipCast makes is stored and scored automatically when the work is done, so you can see how often it has really been right for this team.</p>
     @if (ledger.data(); as l) {
@@ -113,6 +132,7 @@ interface Forecast {
 export class ForecastView {
   readonly target = signal<string>('');
   readonly fc = projectResource<Forecast>((id) => `/projects/${id}/analytics/forecast`, (): Record<string, string> => (this.target() ? { target: this.target() } : {}));
+  readonly risk = projectResource<RiskList>((id) => `/projects/${id}/analytics/risk`);
   readonly ledger = projectResource<Ledger>((id) => `/projects/${id}/forecast-ledger`);
   readonly longDate = longDate; readonly pct = pct; readonly shortDate = shortDate; readonly today = todayISO();
 
