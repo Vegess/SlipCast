@@ -1,4 +1,4 @@
-# Architecture (Phase 1)
+# Architecture
 
 ## Layout
 
@@ -13,21 +13,34 @@ backend/
     security.py        bcrypt hashing, JWT
     deps.py            current user and tenant-scoped lookups
     timeutil.py        UTC handling shared by SQLite and Postgres
-    routers/           auth, projects (+ health), tasks, data (import, demo)
+    routers/           auth, projects (+ health), tasks, data (import, demo),
+                       analytics (flow, forecast, models, ledger, exports), advice
     services/
       importer.py      CSV parsing, column mapping, normalisation, quality report
       demo_data.py     deterministic six-month ticket history generator
       insights.py      rule-based health checks
-  alembic/versions/    0001 initial schema, 0002 ticket history
+      analysis.py      per-project pandas load and cache; lazy model fitting
+      flow.py          cycle time, throughput, cumulative flow, breakdowns, aging
+      forecast.py      Monte Carlo forecast, burn-up, backtest
+      reference_class.py  TF-IDF nearest finished tickets per ticket or draft
+      nlp.py           quality score, type classifier, themes, duplicates
+      risk_model.py    slip-risk logistic regression with explanations
+      ledger.py        forecast ledger: record, resolve, summarise, demo replay
+      findings.py      numbered findings for the advice layer
+      advisor.py       Groq client, validator, rule fallback, rewrite, report
+      export.py        Excel workbook and BI CSV zip
+  alembic/versions/    0001 schema, 0002 ticket history, 0003 forecast ledger, 0004 advice log
+notebooks/             exploratory analysis and model evaluation (not shipped in images)
   tests/
 web/
   src/app/
     core/              API client, auth service, interceptor, guards, models, workspace store
-    shared/            modal, formatting helpers
+    shared/            modal, ECharts wrapper, Markdown renderer, formatting helpers
     features/
       auth/            sign-in and registration
       shell/           sidebar, welcome, import and new-project dialogs
-      project/         project page, board, ticket dialog, project context
+      project/         project page and tabs: board, delivery, forecast, text insights,
+                       advice, model evaluation; ticket dialog with the live check
   docker/              nginx config and runtime config script
 ```
 
@@ -62,3 +75,27 @@ erDiagram
 ## Tenant isolation
 
 Project and ticket lookups go through `deps.get_project_for_user` and `deps.get_task_for_user`, which join on the current user's membership. `tests/test_isolation.py` checks every endpoint returns 404 for another user's data.
+
+## Analysis cache
+
+`services/analysis.get_analysis` loads a project's tickets and events into pandas once and
+caches an `Analysis` object keyed by (ticket count, latest `updated_at`, event count, today's
+date), for up to 32 projects. Models (classifier, themes, risk model, TF-IDF indexes) are
+`cached_property`s, so they are fitted on first use and reused until a ticket changes. This is
+what lets the write-time ticket check answer in milliseconds. On every fresh load the forecast
+ledger resolver scores forecasts whose outcome is now known.
+
+## Forecast ledger
+
+Table `forecasts` (migration 0003). A `project_completion` entry is recorded at most once per
+project per day when the Forecast tab loads; it is scored on the day the team has finished as
+many tickets as were open, which is what the throughput simulation predicts. A
+`ticket_reference_class` entry is recorded when a ticket first moves to in progress and scored
+by its real cycle time. Deleted subjects become void. The demo back-fills the ledger by
+replaying history with only the data known at each moment.
+
+## Advice layer
+
+`findings.py` turns analytics into numbered findings; `advisor.py` asks the LLM for JSON
+suggestions that must cite them and validates every number against the findings. Requests,
+validation counts and helpful votes are stored (migration 0004) and shown on the evaluation page.
