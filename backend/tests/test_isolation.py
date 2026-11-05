@@ -54,6 +54,7 @@ def test_cross_tenant_access_is_denied(client, make_user):
         ).status_code
         == 404
     )
+    assert client.get(f"/api/workspaces/{alice['workspace_id']}/imports", headers=bh).status_code == 404
     assert client.delete(f"/api/projects/{p['id']}", headers=bh).status_code == 404
 
     # Alice's data is untouched

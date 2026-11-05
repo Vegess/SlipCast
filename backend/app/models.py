@@ -188,3 +188,22 @@ class AdviceFeedback(Base):
     source: Mapped[str] = mapped_column(String(10))  # llm | rules
     helpful: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class ImportRecord(Base):
+    """A CSV import and its data-quality report, kept so people can review it later."""
+
+    __tablename__ = "imports"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"), index=True)
+    # The project survives as a link only while it exists; the report outlives it.
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    user_id: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    filename: Mapped[str] = mapped_column(String(255))
+    project_name: Mapped[str] = mapped_column(String(80))
+    rows_read: Mapped[int] = mapped_column(Integer, default=0)
+    imported: Mapped[int] = mapped_column(Integer, default=0)
+    skipped: Mapped[int] = mapped_column(Integer, default=0)
+    report: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

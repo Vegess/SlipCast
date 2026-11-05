@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Membership, Project, Task, User
+from app.models import ImportRecord, Membership, Project, Task, User
 from app.security import decode_access_token
 
 bearer = HTTPBearer(auto_error=False)
@@ -63,3 +63,14 @@ def get_task_for_user(db: Session, user: User, task_id: str) -> Task:
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     return task
+
+
+def get_import_for_user(db: Session, user: User, import_id: str) -> ImportRecord:
+    record = db.scalar(
+        select(ImportRecord)
+        .join(Membership, Membership.workspace_id == ImportRecord.workspace_id)
+        .where(ImportRecord.id == import_id, Membership.user_id == user.id)
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Import not found")
+    return record

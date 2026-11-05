@@ -1,12 +1,12 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, Response, status
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, select, update
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, require_membership
-from app.models import Project, Task, User
+from app.models import ImportRecord, Project, Task, User
 from app.schemas import InsightsOut, ProjectIn, ProjectOut, ProjectUpdate
 from app.services import insights
 
@@ -101,6 +101,8 @@ def update_project(
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     project = get_project_for_user(db, user, project_id)
+    # Keep the import report but drop the link (explicit, so SQLite behaves like Postgres).
+    db.execute(update(ImportRecord).where(ImportRecord.project_id == project.id).values(project_id=None))
     db.delete(project)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

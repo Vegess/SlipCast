@@ -40,6 +40,10 @@ class TokenOut(BaseModel):
     user: UserOut
 
 
+class ProfileUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=80, pattern=r".*\S.*")
+
+
 class MeOut(BaseModel):
     user: UserOut
     workspaces: list[WorkspaceOut]

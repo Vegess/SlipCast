@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.deps import get_current_user, require_membership
-from app.models import Project, Task, TaskEvent, User
+from app.deps import get_current_user, get_import_for_user, require_membership
+from app.models import ImportRecord, Project, Task, TaskEvent, User
 from app.routers.projects import _out, next_color
 from app.services import analysis, demo_data, importer, ledger
 from app.timeutil import naive_utc, now_utc
@@ -85,9 +86,56 @@ async def import_csv(
     db.add(project)
     db.flush()
     _save(db, project, rows, importer.events_for)
+    db.add(
+        ImportRecord(
+            workspace_id=workspace_id,
+            project_id=project.id,
+            user_id=user.id,
+            filename=(file.filename or "upload.csv")[:255],
+            project_name=name,
+            rows_read=report["rows_read"],
+            imported=report["imported"],
+            skipped=report["skipped"],
+            report=report,
+        )
+    )
     db.commit()
     done = sum(r["status"] == "done" for r in rows)
     return {
         "project": _out(project, {project.id: (len(rows), done)}).model_dump(),
         "report": report,
     }
+
+
+def _import_out(r: ImportRecord, with_report: bool) -> dict:
+    out = {
+        "id": r.id,
+        "workspace_id": r.workspace_id,
+        "project_id": r.project_id,
+        "project_name": r.project_name,
+        "filename": r.filename,
+        "rows_read": r.rows_read,
+        "imported": r.imported,
+        "skipped": r.skipped,
+        "created_at": r.created_at,
+    }
+    if with_report:
+        out["report"] = r.report
+    return out
+
+
+@router.get("/workspaces/{workspace_id}/imports")
+def list_imports(
+    workspace_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> list[dict]:
+    """Past CSV imports in this workspace, newest first, with their data-quality reports."""
+    require_membership(db, user, workspace_id)
+    rows = db.scalars(
+        select(ImportRecord).where(ImportRecord.workspace_id == workspace_id).order_by(ImportRecord.created_at.desc())
+    ).all()
+    return [_import_out(r, with_report=True) for r in rows]
+
+
+@router.get("/imports/{import_id}")
+def get_import(import_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    return _import_out(get_import_for_user(db, user, import_id), with_report=True)
