@@ -1,29 +1,54 @@
 import { Routes } from '@angular/router';
-import { authGuard, guestGuard } from './core/auth.guard';
+import { authGuard, guestGuard, landingGuard } from './core/auth.guard';
 
+// Every page is lazy-loaded.
 export const routes: Routes = [
-  { path: 'login', canActivate: [guestGuard],
+  { path: 'login', canActivate: [guestGuard], title: 'Sign in · SlipCast',
     loadComponent: () => import('./features/auth/auth.page').then((m) => m.AuthPage) },
   {
     path: '',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
+    loadComponent: () => import('./features/layout/app-layout.component').then((m) => m.AppLayoutComponent),
     children: [
-      { path: '', loadComponent: () => import('./features/shell/welcome.page').then((m) => m.WelcomePage) },
+      { path: '', pathMatch: 'full', canActivate: [landingGuard], title: 'SlipCast · Know when work will really ship',
+        loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage) },
+      { path: 'about', title: 'How SlipCast works',
+        loadComponent: () => import('./features/about/about.page').then((m) => m.AboutPage) },
       {
-        path: 'projects/:projectId',
-        loadComponent: () => import('./features/project/project.page').then((m) => m.ProjectPage),
+        path: '',
+        canActivate: [authGuard],
         children: [
-          { path: '', pathMatch: 'full', redirectTo: 'board' },
-          { path: 'board', loadComponent: () => import('./features/project/board.view').then((m) => m.BoardView) },
-          { path: 'delivery', loadComponent: () => import('./features/project/delivery.view').then((m) => m.DeliveryView) },
-          { path: 'forecast', loadComponent: () => import('./features/project/forecast.view').then((m) => m.ForecastView) },
-          { path: 'text', loadComponent: () => import('./features/project/text.view').then((m) => m.TextView) },
-          { path: 'advice', loadComponent: () => import('./features/project/advice.view').then((m) => m.AdviceView) },
-          { path: 'evaluation', loadComponent: () => import('./features/project/evaluation.view').then((m) => m.EvaluationView) },
+          { path: 'dashboard', title: 'Dashboard · SlipCast',
+            loadComponent: () => import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage) },
+          { path: 'imports', title: 'Imports · SlipCast',
+            loadComponent: () => import('./features/imports/imports.page').then((m) => m.ImportsPage) },
+          { path: 'settings', title: 'Settings · SlipCast',
+            loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage) },
+          {
+            path: 'projects',
+            loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
+            children: [
+              { path: '', title: 'Projects · SlipCast',
+                loadComponent: () => import('./features/shell/welcome.page').then((m) => m.WelcomePage) },
+              {
+                path: ':projectId',
+                title: 'Project · SlipCast',
+                loadComponent: () => import('./features/project/project.page').then((m) => m.ProjectPage),
+                children: [
+                  { path: '', pathMatch: 'full', redirectTo: 'board' },
+                  { path: 'board', loadComponent: () => import('./features/project/board.view').then((m) => m.BoardView) },
+                  { path: 'delivery', loadComponent: () => import('./features/project/delivery.view').then((m) => m.DeliveryView) },
+                  { path: 'forecast', loadComponent: () => import('./features/project/forecast.view').then((m) => m.ForecastView) },
+                  { path: 'text', loadComponent: () => import('./features/project/text.view').then((m) => m.TextView) },
+                  { path: 'advice', loadComponent: () => import('./features/project/advice.view').then((m) => m.AdviceView) },
+                  { path: 'evaluation', loadComponent: () => import('./features/project/evaluation.view').then((m) => m.EvaluationView) },
+                ],
+              },
+            ],
+          },
         ],
       },
+      { path: '**', title: 'Page not found · SlipCast',
+        loadComponent: () => import('./features/not-found/not-found.page').then((m) => m.NotFoundPage) },
     ],
   },
-  { path: '**', redirectTo: '' },
 ];

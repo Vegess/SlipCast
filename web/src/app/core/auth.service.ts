@@ -41,6 +41,7 @@ export class AuthService {
     }
   }
 
+  /** Signs in. The caller decides where to go next (dashboard, or the demo project). */
   async login(email: string, password: string) {
     const r = await this.api.post<TokenOut>('/auth/login', { email, password });
     await this.start(r.access_token);
@@ -51,11 +52,15 @@ export class AuthService {
     await this.start(r.access_token);
   }
 
+  async updateName(name: string) {
+    const user = await this.api.patch<User>('/auth/me', { name });
+    this.user.set(user);
+  }
+
   private async start(token: string) {
     this.setToken(token);
     this.loaded = false;
     await this.ensureLoaded();
-    await this.router.navigateByUrl('/');
   }
 
   logout() {

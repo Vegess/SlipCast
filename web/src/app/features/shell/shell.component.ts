@@ -14,11 +14,7 @@ import { NewProjectDialog } from './new-project.dialog';
   template: `
   <div class="flex h-full flex-col md:flex-row">
     <aside class="flex shrink-0 flex-col border-line bg-gradient-to-b from-panel to-panel-tint md:h-full md:w-64 md:border-r">
-      <a routerLink="/" class="flex items-center gap-2.5 px-5 pb-1 pt-5">
-        <img src="favicon.svg" alt="" width="26" height="26">
-        <span class="font-display text-xl font-bold">SlipCast</span>
-      </a>
-      <p class="truncate px-5 pb-4 text-xs text-muted">{{ auth.workspace()?.name }}</p>
+      <p class="truncate px-5 pb-4 pt-5 text-xs font-medium text-muted">{{ auth.workspace()?.name }}</p>
 
       <div class="grid grid-cols-2 gap-2 px-3">
         <button class="btn px-2" (click)="dialog.set('import')">Import CSV</button>
@@ -55,10 +51,6 @@ import { NewProjectDialog } from './new-project.dialog';
           <input type="checkbox" class="mt-1 accent-accent" [checked]="store.privacyMode()" (change)="store.setPrivacy($any($event.target).checked)">
           <span>Privacy mode<span class="block text-xs text-muted">Never send ticket titles or theme names to the AI.</span></span>
         </label>
-        <div class="flex items-center justify-between">
-          <span class="truncate text-sm">{{ auth.user()?.name }}</span>
-          <button class="btn btn-ghost px-2 text-xs text-muted" (click)="auth.logout()">Sign out</button>
-        </div>
       </div>
     </aside>
 

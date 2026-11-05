@@ -9,8 +9,12 @@ export const authGuard: CanActivateFn = async () => {
   return (await auth.ensureLoaded()) || router.parseUrl('/login');
 };
 
+/** Sign-in page: signed-in users go straight to their dashboard. */
 export const guestGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  return (await auth.ensureLoaded()) ? router.parseUrl('/') : true;
+  return (await auth.ensureLoaded()) ? router.parseUrl('/dashboard') : true;
 };
+
+/** Public landing page at "/": signed-in users see their dashboard instead. */
+export const landingGuard: CanActivateFn = guestGuard;

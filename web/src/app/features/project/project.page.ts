@@ -64,7 +64,7 @@ export class ProjectPage {
     if (!p || !confirm(`Delete "${p.name}" and its ${p.task_count} tickets?`)) return;
     try {
       await this.ctx.remove();
-      this.router.navigateByUrl('/');
+      this.router.navigateByUrl('/projects');
     } catch (e) { this.error.set(errorMessage(e)); }
   }
 }

@@ -17,7 +17,7 @@ import { WorkspaceStore } from '../../core/workspace.store';
         <div class="card"><h3 class="section-title">Check data quality</h3><p class="note mt-1">See what was imported, skipped and inferred before you trust any number.</p></div>
         <div class="card"><h3 class="section-title">Track every change</h3><p class="note mt-1">Each status move is recorded, building the history that analytics run on.</p></div>
       </div>
-      <p class="mt-8 text-sm text-muted">Use <b class="text-fg">Demo data</b> or <b class="text-fg">Import CSV</b> in the sidebar to begin.</p>
+      <p class="mt-8 text-sm text-muted">Use <b class="text-fg">Demo data</b> or <b class="text-fg">Import CSV</b> in the sidebar to begin. Past imports and their data-quality reports are listed under <b class="text-fg">Imports</b>.</p>
     </div>
   }`,
 })

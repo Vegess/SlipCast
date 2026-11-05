@@ -1,15 +1,17 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { errorMessage } from '../../core/api.service';
+import { Api, errorMessage } from '../../core/api.service';
+import { Project } from '../../core/models';
 import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-auth-page',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
   <div class="grid min-h-full lg:grid-cols-[1.25fr_1fr]">
     <section class="flex flex-col justify-between px-6 py-8 sm:px-12 lg:border-r lg:border-line lg:py-14">
-      <span class="font-display text-xl font-bold">SlipCast</span>
+      <a routerLink="/" class="font-display text-xl font-bold hover:text-accent">SlipCast</a>
       <div class="my-10 max-w-xl">
         <h1 class="text-4xl font-bold leading-[1.05] sm:text-6xl">Know when your work will really ship, and why it slips.</h1>
         <p class="mt-5 max-w-md text-base text-muted">
@@ -26,13 +28,13 @@ import { AuthService } from '../../core/auth.service';
           
         </svg>
       </div>
-      <p class="text-xs text-muted">Angular · FastAPI · PostgreSQL · pandas</p>
+      <p class="text-xs text-muted">Angular · FastAPI · PostgreSQL · pandas · scikit-learn</p>
     </section>
 
     <section class="flex items-center justify-center px-6 py-10">
       <form class="w-full max-w-sm" (ngSubmit)="submit()">
         <h2 class="text-2xl font-medium">{{ mode() === 'signin' ? 'Sign in' : 'Create your account' }}</h2>
-        <p class="mt-1 text-sm text-muted">{{ mode() === 'signin' ? 'Welcome back.' : 'You get a private workspace for your projects.' }}</p>
+        <p class="mt-1 text-sm text-muted">{{ mode() === 'signin' ? 'Welcome back.' : demo() ? 'Create a free account and we will load six months of demo tickets for you.' : 'You get a private workspace for your projects.' }}</p>
         <div class="mt-6 grid gap-4">
           @if (mode() === 'register') {
             <label class="label">Name <input class="input" name="name" [(ngModel)]="name" required maxlength="80" autocomplete="name"></label>
@@ -46,7 +48,7 @@ import { AuthService } from '../../core/auth.service';
           </label>
           @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
           <button class="btn btn-primary w-full py-2.5" [disabled]="busy()">
-            {{ busy() ? 'One moment…' : mode() === 'signin' ? 'Sign in' : 'Create account' }}
+            {{ busy() ? 'One moment…' : mode() === 'signin' ? 'Sign in' : demo() ? 'Create account and open the demo' : 'Create account' }}
           </button>
         </div>
         <p class="mt-6 text-sm text-muted">
@@ -59,13 +61,24 @@ import { AuthService } from '../../core/auth.service';
     </section>
   </div>`,
 })
-export class AuthPage {
+export class AuthPage implements OnInit {
   private auth = inject(AuthService);
+  private api = inject(Api);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  /** Came from "Try the demo": after signing up, open a fresh demo project. */
+  readonly demo = signal(false);
   readonly mode = signal<'signin' | 'register'>('signin');
   readonly busy = signal(false);
   readonly error = signal('');
   name = ''; email = ''; password = '';
   readonly pins: [number, number, string][] = [[60, 182, 'stroke-ok'], [180, 150, 'stroke-ok'], [300, 112, 'stroke-info'], [360, 96, 'stroke-accent']];
+
+  ngOnInit() {
+    const q = this.route.snapshot.queryParamMap;
+    this.demo.set(q.get('demo') === '1');
+    if (q.get('mode') === 'register' || this.demo()) this.mode.set('register');
+  }
 
   toggle() { this.mode.set(this.mode() === 'signin' ? 'register' : 'signin'); this.error.set(''); }
 
@@ -75,6 +88,13 @@ export class AuthPage {
     try {
       if (this.mode() === 'signin') await this.auth.login(this.email, this.password);
       else await this.auth.register(this.name, this.email, this.password);
+      if (this.demo()) {
+        const ws = this.auth.workspace()!.id;
+        const p = await this.api.post<Project>(`/workspaces/${ws}/demo-project`);
+        await this.router.navigate(['/projects', p.id, 'board']);
+      } else {
+        await this.router.navigateByUrl('/dashboard');
+      }
     } catch (e) {
       this.error.set(errorMessage(e));
     } finally {
