@@ -32,10 +32,11 @@ def test_cross_tenant_access_is_denied(client, make_user):
     assert client.patch(f"/api/tasks/{t['id']}", json={"title": "pwned"}, headers=bh).status_code == 404
     assert client.delete(f"/api/tasks/{t['id']}", headers=bh).status_code == 404
     assert client.get(f"/api/projects/{p['id']}/insights", headers=bh).status_code == 404
-    for path in ("overview", "flow", "forecast"):
+    for path in ("overview", "flow", "forecast", "text", "risk", "evaluation"):
         assert client.get(f"/api/projects/{p['id']}/analytics/{path}", headers=bh).status_code == 404
     assert client.get(f"/api/projects/{p['id']}/forecast-ledger", headers=bh).status_code == 404
     assert client.get(f"/api/tasks/{t['id']}/reference-class", headers=bh).status_code == 404
+    assert client.get(f"/api/tasks/{t['id']}/analysis", headers=bh).status_code == 404
     assert client.post(f"/api/projects/{p['id']}/reference-class", json={"title": "x"}, headers=bh).status_code == 404
     assert client.post(f"/api/projects/{p['id']}/ticket-check", json={"title": "x"}, headers=bh).status_code == 404
     assert client.post(f"/api/workspaces/{alice['workspace_id']}/demo-project", headers=bh).status_code == 404
