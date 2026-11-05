@@ -34,6 +34,7 @@ app.add_middleware(
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Content-Disposition"],  # lets the web app name downloaded exports
 )
 
 for r in (auth.router, projects.router, tasks.router, data.router, analytics.router, advice.router):

@@ -39,6 +39,8 @@ def test_cross_tenant_access_is_denied(client, make_user):
     assert client.get(f"/api/tasks/{t['id']}/analysis", headers=bh).status_code == 404
     for path in ("advice", "status-report", "rewrite"):
         assert client.post(f"/api/projects/{p['id']}/{path}", json={}, headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{p['id']}/export.xlsx", headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{p['id']}/export/bi.zip", headers=bh).status_code == 404
     vote = {"suggestion_key": "k", "source": "rules", "helpful": True}
     assert client.post(f"/api/projects/{p['id']}/feedback", json=vote, headers=bh).status_code == 404
     assert client.post(f"/api/projects/{p['id']}/reference-class", json={"title": "x"}, headers=bh).status_code == 404

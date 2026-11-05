@@ -1,13 +1,13 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
 from app.models import User
 from app.schemas import DraftIn
-from app.services import ledger
+from app.services import export, ledger
 from app.services.analysis import get_analysis
 
 router = APIRouter(tags=["analytics"])
@@ -109,3 +109,28 @@ def task_analysis(task_id: str, user: User = Depends(get_current_user), db: Sess
     """Type, theme, quality, slip risk, reference class and duplicates for one ticket."""
     task = get_task_for_user(db, user, task_id)
     return get_analysis(db, task.project_id).task_analysis(task.id)
+
+
+@router.get("/projects/{project_id}/export.xlsx")
+def export_excel(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
+    """Excel workbook: tickets, history, cycle times, throughput, forecast, ledger and model metrics."""
+    project = get_project_for_user(db, user, project_id)
+    analysis = get_analysis(db, project.id)
+    data = export.workbook(db, analysis, project.name, ledger.summary(db, analysis))
+    return Response(
+        data,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="slipcast-{export.slug(project.name)}.xlsx"'},
+    )
+
+
+@router.get("/projects/{project_id}/export/bi.zip")
+def export_bi(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
+    """Tidy CSVs (one row per entity, ISO dates) for Tableau or Power BI."""
+    project = get_project_for_user(db, user, project_id)
+    data = export.bi_zip(db, get_analysis(db, project.id))
+    return Response(
+        data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="slipcast-{export.slug(project.name)}-bi.zip"'},
+    )
