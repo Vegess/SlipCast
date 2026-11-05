@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Api, errorMessage } from '../../core/api.service';
 import { KIND_LABEL, STATUSES, Task, TicketCheck } from '../../core/models';
 import { ModalComponent } from '../../shared/modal.component';
+import { WorkspaceStore } from '../../core/workspace.store';
 import { ProjectContext } from './project.context';
 
 @Component({
@@ -64,6 +65,17 @@ import { ProjectContext } from './project.context';
               @if (c.slip_risk.factors.length) { <p class="text-xs text-muted">{{ c.slip_risk.factors.join(' · ') }}</p> }
             </div>
           }
+          <div>
+            <button type="button" class="btn w-full text-xs" (click)="suggestRewrite()" [disabled]="rewriting()">{{ rewriting() ? 'Writing…' : 'Suggest a clearer version' }}</button>
+            @if (rewrite(); as r) {
+              <div class="mt-2 rounded-lg border border-line p-2.5 text-xs">
+                <p class="font-medium text-fg">{{ r.title }}</p>
+                <p class="mt-1 max-h-32 overflow-y-auto whitespace-pre-line text-muted">{{ r.description }}</p>
+                <p class="mt-1 text-muted">{{ r.provider === 'groq' ? 'Written by the AI. Check it before using.' : 'Template: fill in the [brackets].' }}</p>
+                <button type="button" class="btn mt-2 px-2 py-1 text-xs" (click)="useRewrite()">Use this</button>
+              </div>
+            }
+          </div>
           @if (c.duplicates.length) {
             <div>
               <p class="text-xs font-medium text-accent">Possible duplicates</p>
@@ -88,6 +100,27 @@ export class TaskDialog implements OnInit, OnDestroy {
   private seq = 0;
   readonly check = signal<TicketCheck | null>(null);
   readonly checkError = signal('');
+  private store = inject(WorkspaceStore);
+  readonly rewrite = signal<{ title: string; description: string; provider: string } | null>(null);
+  readonly rewriting = signal(false);
+
+  async suggestRewrite() {
+    this.rewriting.set(true);
+    try {
+      this.rewrite.set(await this.api.post(`/projects/${this.ctx.id()}/rewrite`, {
+        title: this.form.title, description: this.form.description, kind: this.form.kind || null, privacy_mode: this.store.privacyMode(),
+      }));
+    } catch (e) { this.checkError.set(errorMessage(e)); }
+    finally { this.rewriting.set(false); }
+  }
+
+  useRewrite() {
+    const r = this.rewrite();
+    if (!r) return;
+    this.form = { ...this.form, title: r.title, description: r.description };
+    this.rewrite.set(null);
+    this.schedule();
+  }
   readonly task = input<Task | null>(null);
   readonly closed = output<void>();
   readonly statuses = STATUSES;

@@ -3,12 +3,24 @@ import { Api } from './api.service';
 import { AuthService } from './auth.service';
 import { Project } from './models';
 
+const PRIVACY_KEY = 'slipcast_privacy';
+function readPrivacy(): boolean {
+  try { return localStorage.getItem(PRIVACY_KEY) === '1'; } catch { return false; }
+}
+
 @Injectable({ providedIn: 'root' })
 export class WorkspaceStore {
   private api = inject(Api);
   private auth = inject(AuthService);
 
   readonly projects = signal<Project[]>([]);
+  /** Privacy mode: no ticket titles or theme names go to the AI, and rewrites use the template. */
+  readonly privacyMode = signal<boolean>(readPrivacy());
+
+  setPrivacy(on: boolean) {
+    this.privacyMode.set(on);
+    try { localStorage.setItem(PRIVACY_KEY, on ? '1' : '0'); } catch { /* storage blocked */ }
+  }
   readonly workspaceId = computed(() => this.auth.workspace()?.id ?? null);
 
   async load() {

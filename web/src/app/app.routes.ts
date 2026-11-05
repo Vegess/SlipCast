@@ -19,6 +19,7 @@ export const routes: Routes = [
           { path: 'delivery', loadComponent: () => import('./features/project/delivery.view').then((m) => m.DeliveryView) },
           { path: 'forecast', loadComponent: () => import('./features/project/forecast.view').then((m) => m.ForecastView) },
           { path: 'text', loadComponent: () => import('./features/project/text.view').then((m) => m.TextView) },
+          { path: 'advice', loadComponent: () => import('./features/project/advice.view').then((m) => m.AdviceView) },
           { path: 'evaluation', loadComponent: () => import('./features/project/evaluation.view').then((m) => m.EvaluationView) },
         ],
       },

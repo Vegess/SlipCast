@@ -40,6 +40,10 @@ import { NewProjectDialog } from './new-project.dialog';
       </nav>
 
       <div class="hidden space-y-3 border-t border-line px-5 py-4 md:block">
+        <label class="flex cursor-pointer items-start gap-2.5 text-sm">
+          <input type="checkbox" class="mt-1 accent-[#F2B632]" [checked]="store.privacyMode()" (change)="store.setPrivacy($any($event.target).checked)">
+          <span>Privacy mode<span class="block text-xs text-muted">Never send ticket titles or theme names to the AI.</span></span>
+        </label>
         <div class="flex items-center justify-between">
           <span class="truncate text-sm">{{ auth.user()?.name }}</span>
           <button class="btn btn-ghost px-2 text-xs text-muted" (click)="auth.logout()">Sign out</button>
