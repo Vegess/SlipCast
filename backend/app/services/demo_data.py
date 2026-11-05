@@ -253,25 +253,22 @@ def generate(today: datetime, n: int = 420, days: int = 182, seed: int = 42) -> 
         events = [(None, "planned", created)]
         started = created + timedelta(days=wait)
         events.append(("planned", "in_progress", started))
-        t = started
+        t, work = started, cycle  # t: when the current stint of work began; work: days still needed
         if r.random() < 0.08:  # bounced back to planned, then picked up again
             back = t + timedelta(days=cycle * 0.3)
-            events += [
-                ("in_progress", "planned", back),
-                ("planned", "in_progress", back + timedelta(days=r.uniform(1, 4))),
-            ]
-            t = events[-1][2]
-            cycle *= 0.8
+            resume = back + timedelta(days=r.uniform(1, 4))
+            events += [("in_progress", "planned", back), ("planned", "in_progress", resume)]
+            t, work = resume, cycle * 0.7 * 0.8
         blocked_p = 0.3 if topic == "infra" else 0.15
         if r.random() < blocked_p:
-            b_at = t + timedelta(days=cycle * 0.4)
+            b_at = t + timedelta(days=work * 0.4)
             b_len = float(np_r.exponential(3.0)) + 0.5
             events += [
                 ("in_progress", "blocked", b_at),
                 ("blocked", "in_progress", b_at + timedelta(days=b_len)),
             ]
-            cycle += b_len
-        completed = started + timedelta(days=cycle)
+            work += b_len
+        completed = t + timedelta(days=work)
         events.append(("in_progress", "done", completed))
 
         events = [e for e in events if e[2] <= today]
