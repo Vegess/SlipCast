@@ -114,3 +114,53 @@ def burnup(tickets: pd.DataFrame, now: datetime, result: dict, weeks: int = 26) 
             "p85": [[today, done_now], [f["p85"], total]],
         }
     return out
+
+
+def backtest(tickets: pd.DataFrame, now: datetime, step_days: int = 7, horizon_weeks: float = 2.0) -> dict:
+    """Replay the forecast at past dates and compare with what really happened.
+
+    At each weekly cutoff, using only throughput known by then, forecast how long the
+    next N tickets will take (N is about two weeks of typical throughput), then measure
+    how long the team actually took to finish N more tickets.
+    """
+    from app.services import flow  # local import: flow does not depend on forecast
+
+    finished = tickets[tickets["finished"]]
+    if len(finished) < 30:
+        return {"available": False, "reason": f"Needs at least 30 finished tickets; this project has {len(finished)}."}
+    full = flow.history_weeks(tickets, now, weeks=26)
+    batch = max(5, int(round(float(np.median(full)) * horizon_weeks))) if full else 5
+    done = np.sort(finished["completed_at"].to_numpy(dtype="datetime64[ns]"))
+    cutoff = (tickets["created_at"].min() + timedelta(weeks=6)).normalize()
+    points = []
+    while cutoff < pd.Timestamp(now):
+        known = tickets[tickets["created_at"] <= cutoff].copy()
+        known["finished"] = known["finished"] & (known["completed_at"] <= cutoff)
+        history = np.array(flow.history_weeks(known, cutoff.to_pydatetime()))
+        later = done[done > np.datetime64(cutoff)]
+        if history.size >= MIN_HISTORY_WEEKS and history.sum() > 0 and later.size >= batch:
+            actual = (pd.Timestamp(later[batch - 1]) - cutoff).total_seconds() / (7 * 86400)
+            weeks = simulate(history, batch, sims=2000)
+            p50, p85 = (float(v) for v in np.percentile(weeks, [50, 85]))
+            points.append(
+                {
+                    "cutoff": cutoff.date().isoformat(),
+                    "actual_weeks": round(actual, 2),
+                    "p50_weeks": round(p50, 2),
+                    "p85_weeks": round(p85, 2),
+                    "hit_p85": bool(actual <= p85),
+                }
+            )
+        cutoff += timedelta(days=step_days)
+    if len(points) < 5:
+        return {"available": False, "reason": "Not enough history to replay at least 5 past forecasts."}
+    actual = np.array([p["actual_weeks"] for p in points])
+    p50 = np.array([p["p50_weeks"] for p in points])
+    return {
+        "available": True,
+        "reason": "",
+        "batch_size": batch,
+        "p85_hit_rate": round(float(np.mean([p["hit_p85"] for p in points])), 3),
+        "p50_mean_abs_error_days": round(float(np.mean(np.abs(actual - p50)) * 7), 1),
+        "points": points,
+    }

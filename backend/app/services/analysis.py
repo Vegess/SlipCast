@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Task, TaskEvent
-from app.services import flow, forecast, ledger, nlp, reference_class
+from app.services import flow, forecast, ledger, nlp, reference_class, risk_model
 from app.timeutil import naive_utc, now_utc
 
 TICKET_COLUMNS = (
@@ -96,14 +96,34 @@ class Analysis:
         self._forecasts: dict[date | None, dict] = {}
 
     # ---------- shared columns ----------
-    @property
+    @cached_property
+    def classifier(self) -> dict:
+        return nlp.train_classifier(self.tickets)
+
+    @cached_property
     def effective_kind(self) -> pd.Series:
-        """Labelled type where known; otherwise 'unknown'. Phase 2C fills in predictions."""
-        return self.tickets["kind"].where(self.tickets["kind"].notna(), "unknown")
+        """Labelled type where a person set one, else the classifier's prediction, else 'unknown'."""
+        kind = self.tickets["kind"].where(self.tickets["kind_source"] == "label")
+        predicted = self.classifier["predictions"]
+        if len(predicted):
+            kind = kind.fillna(predicted)
+        return kind.fillna("unknown")
+
+    @cached_property
+    def theme_result(self) -> dict:
+        return nlp.find_themes(self.tickets)
 
     @property
     def themes(self) -> pd.Series | None:
-        return None
+        return self.theme_result["labels"] if self.theme_result["available"] else None
+
+    @cached_property
+    def quality(self) -> pd.Series:
+        return nlp.quality_column(self.tickets)
+
+    @cached_property
+    def risk(self) -> risk_model.RiskModel:
+        return risk_model.RiskModel(self.tickets, self.effective_kind, self.quality)
 
     # ---------- flow and forecast ----------
     @cached_property
@@ -161,6 +181,12 @@ class Analysis:
         """Write-time check for a draft ticket: quality, reference class, slip risk, duplicates."""
         score, reasons = nlp.quality(title, description, owner, due)
         planned = (due - self.today).days if due else None
+        slip_risk = None
+        if due is not None and (title.strip() or description.strip()):
+            draft_kind = kind
+            if draft_kind is None and self.classifier["available"]:
+                draft_kind = str(self.classifier["model"].predict([reference_class.ticket_text(title, description)])[0])
+            slip_risk = self.risk.score_draft(title, description, owner, planned, priority, draft_kind or "unknown")
         duplicates = (
             self.text_index.similar_to(title, description, exclude_id=exclude_id)
             if self.text_index is not None and (title.strip() or description.strip())
@@ -169,8 +195,89 @@ class Analysis:
         return {
             "quality": {"score": score, "reasons": reasons},
             "reference": self.reference(title, description, planned, exclude_id),
-            "slip_risk": None,
+            "slip_risk": slip_risk,
             "duplicates": duplicates,
+        }
+
+    # ---------- models ----------
+    def text_insights(self) -> dict:
+        t = self.tickets
+        th = self.theme_result
+        topics = {"available": th["available"], "reason": th.get("reason", ""), "silhouette": th["silhouette"]}
+        topics["items"] = []
+        if th["available"]:
+            for name, g in t.groupby(th["labels"].values, sort=False):
+                if name == "Other":
+                    continue
+                cycles = g.loc[g["finished"], "cycle_days"]
+                topics["items"].append(
+                    {
+                        "name": name,
+                        "size": int(len(g)),
+                        "keywords": th["keywords"][name],
+                        "open": int((g["status"] != "done").sum()),
+                        "median_cycle_days": round(float(cycles.median()), 1) if len(cycles) else None,
+                        "late_rate": round(float(g["late"].mean()), 3) if g["late"].notna().any() else None,
+                        "kinds": self.effective_kind.loc[g.index].value_counts().to_dict(),
+                    }
+                )
+            topics["items"].sort(key=lambda d: -d["size"])
+        open_t = t[t["status"] != "done"]
+        lowest = []
+        for r in open_t.assign(q=self.quality.loc[open_t.index]).sort_values("q").head(10).itertuples():
+            score, reasons = nlp.quality(r.title, r.description, r.owner, r.due)
+            lowest.append({"id": r.id, "title": r.title, "score": score, "reasons": reasons})
+        return {
+            "topics": topics,
+            "duplicates": nlp.duplicate_pairs(self.text_index),
+            "quality": {
+                "average_open": round(float(self.quality.loc[open_t.index].mean()), 1) if len(open_t) else None,
+                "lowest": lowest,
+            },
+            "types": {
+                "counts": self.effective_kind.value_counts().to_dict(),
+                "predicted": self.classifier["predicted_unlabeled"],
+                "classifier_available": self.classifier["available"],
+                "reason": self.classifier.get("reason", ""),
+            },
+        }
+
+    @cached_property
+    def evaluation(self) -> dict:
+        clf = {k: v for k, v in self.classifier.items() if k not in ("predictions", "model")}
+        th = self.theme_result
+        return {
+            "classifier": clf,
+            "topics": {"available": th["available"], "silhouette": th["silhouette"], "count": th["count"]},
+            "risk": self.risk.evaluation(),
+            "forecast_backtest": forecast.backtest(self.tickets, self.now),
+            "reference_class": reference_class.evaluate(self.tickets),
+        }
+
+    def task_analysis(self, task_id: str) -> dict:
+        """Everything SlipCast knows about one ticket."""
+        idx = self.tickets.index[self.tickets["id"] == task_id][0]
+        r = self.tickets.loc[idx]
+        score, reasons = nlp.quality(r["title"], r["description"], r["owner"], r["due"])
+        risk = None
+        if self.risk.available and r["status"] != "done" and pd.notna(r["due"]):
+            prob = float(self.risk.model.predict_proba(self.risk.x.loc[[idx]])[0, 1])
+            risk = {
+                "risk": round(prob, 3),
+                "factors": risk_model.explain(self.risk.model, self.risk.x.loc[idx], r["owner"]),
+            }
+        themes = self.themes
+        return {
+            "id": task_id,
+            "kind": self.effective_kind.loc[idx],
+            "kind_source": "label" if r["kind_source"] == "label" else "predicted",
+            "theme": themes.loc[idx] if themes is not None else None,
+            "quality": {"score": score, "reasons": reasons},
+            "slip_risk": risk,
+            "reference": self.reference_for_task(task_id),
+            "duplicates": self.text_index.similar_to(r["title"], r["description"], exclude_id=task_id)
+            if self.text_index is not None
+            else [],
         }
 
     def overview(self) -> dict:
@@ -185,7 +292,9 @@ class Analysis:
             "cycle": {k: f["cycle_time"]["percentiles"].get(k) for k in ("p50", "p85")},
             "throughput_avg": round(float(np.mean(hist)), 1) if hist else None,
             "forecast_p85": fc["forecast"].get("p85") if fc["forecast"]["available"] else None,
-            "high_risk": None,
+            "high_risk": sum(i["risk"] >= risk_model.HIGH_RISK for i in self.risk.open_risks()["items"])
+            if self.risk.available
+            else None,
         }
 
 

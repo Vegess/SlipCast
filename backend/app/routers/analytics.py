@@ -76,3 +76,34 @@ def ticket_check(
     return get_analysis(db, project.id).ticket_check(
         body.title, body.description, body.owner, body.due, body.priority, body.kind, exclude_id=body.task_id
     )
+
+
+@router.get("/projects/{project_id}/analytics/text")
+def text(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Themes, likely duplicates, ticket quality and type counts from ticket text."""
+    project = get_project_for_user(db, user, project_id)
+    return get_analysis(db, project.id).text_insights()
+
+
+@router.get("/projects/{project_id}/analytics/risk")
+def risk(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Open tickets ranked by predicted chance of finishing after their due date."""
+    project = get_project_for_user(db, user, project_id)
+    return get_analysis(db, project.id).risk.open_risks()
+
+
+@router.get("/projects/{project_id}/analytics/evaluation")
+def evaluation(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """How well every model performs on data it never saw, against simple baselines."""
+    project = get_project_for_user(db, user, project_id)
+    analysis = get_analysis(db, project.id)
+    ledger_summary = ledger.summary(db, analysis)
+    ledger_summary.pop("entries")
+    return {**analysis.evaluation, "ledger": ledger_summary}
+
+
+@router.get("/tasks/{task_id}/analysis")
+def task_analysis(task_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Type, theme, quality, slip risk, reference class and duplicates for one ticket."""
+    task = get_task_for_user(db, user, task_id)
+    return get_analysis(db, task.project_id).task_analysis(task.id)
