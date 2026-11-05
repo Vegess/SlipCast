@@ -1,5 +1,7 @@
 import { NgClass } from '@angular/common';
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { Api, errorMessage } from '../../core/api.service';
+import { ProjectContext } from './project.context';
 import { KIND_LABEL } from '../../core/models';
 import { ChartComponent, PALETTE, baseOption } from '../../shared/chart.component';
 import { longDate, num, pct } from '../../shared/format';
@@ -20,6 +22,12 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
   selector: 'app-delivery-view',
   imports: [ChartComponent, NgClass],
   template: `
+  <div class="mb-5 flex flex-wrap items-center gap-2">
+    <p class="note mr-auto">How work flows through this project. Export the same numbers to analyse them elsewhere.</p>
+    <button class="btn" (click)="download('export.xlsx', 'slipcast.xlsx')" [disabled]="busy()">Export to Excel</button>
+    <button class="btn" (click)="download('export/bi.zip', 'slipcast-bi.zip')" [disabled]="busy()">Export for Tableau / Power BI</button>
+  </div>
+  @if (exportError()) { <p class="mb-3 text-sm text-bad">{{ exportError() }}</p> }
   @if (flow.error() || ov.error()) { <p class="text-sm text-bad">{{ flow.error() || ov.error() }}</p> }
   @if (ov.data(); as o) {
     <div class="mb-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
@@ -102,6 +110,19 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
   } @else if (!flow.error()) { <p class="note">Crunching the numbers…</p> }`,
 })
 export class DeliveryView {
+  private api = inject(Api);
+  private ctx = inject(ProjectContext);
+  readonly busy = signal(false);
+  readonly exportError = signal('');
+
+  async download(path: string, name: string) {
+    this.busy.set(true);
+    this.exportError.set('');
+    try { await this.api.download(`/projects/${this.ctx.id()}/${path}`, name); }
+    catch (e) { this.exportError.set(errorMessage(e)); }
+    finally { this.busy.set(false); }
+  }
+
   readonly flow = projectResource<Flow>((id) => `/projects/${id}/analytics/flow`);
   readonly ov = projectResource<Overview>((id) => `/projects/${id}/analytics/overview`);
   readonly kindLabel = KIND_LABEL;

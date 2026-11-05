@@ -31,6 +31,15 @@ export class Api {
   patch<T>(path: string, body: unknown): Promise<T> {
     return firstValueFrom(this.http.patch<T>(API_URL + path, body));
   }
+  /** Downloads an authenticated file and hands it to the browser to save. */
+  async download(path: string, fallbackName: string): Promise<void> {
+    const res = await firstValueFrom(this.http.get(API_URL + path, { responseType: 'blob', observe: 'response' }));
+    const name = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '')?.[1] ?? fallbackName;
+    const url = URL.createObjectURL(res.body!);
+    const a = document.createElement('a');
+    a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   delete(path: string): Promise<unknown> {
     return firstValueFrom(this.http.delete(API_URL + path));
   }
