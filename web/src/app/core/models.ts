@@ -33,3 +33,18 @@ export const STATUSES: { id: Status; label: string; color: string }[] = [
 export const KIND_LABEL: Record<string, string | undefined> = {
   bug: 'Bug', feature: 'Feature', tech_debt: 'Tech debt', support: 'Support', unknown: 'Unknown',
 };
+
+export interface ReferenceClass {
+  available: boolean; reason: string; n: number; summary?: string;
+  p10?: number; p25?: number; p50?: number; p85?: number; p90?: number; late_rate?: number | null;
+  similar: { id: string; title: string; days: number; similarity: number }[];
+  plan?: { planned_days: number | null; under_planned: boolean; message: string } | null;
+  actual_days?: number;
+}
+
+export interface TicketCheck {
+  quality: { score: number; reasons: string[] };
+  reference: ReferenceClass;
+  slip_risk: { risk: number; factors: string[] } | null;
+  duplicates: { id: string; title: string; status: string; similarity: number }[];
+}

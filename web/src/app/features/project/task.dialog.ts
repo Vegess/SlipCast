@@ -1,7 +1,7 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { errorMessage } from '../../core/api.service';
-import { KIND_LABEL, STATUSES, Task } from '../../core/models';
+import { Api, errorMessage } from '../../core/api.service';
+import { KIND_LABEL, STATUSES, Task, TicketCheck } from '../../core/models';
 import { ModalComponent } from '../../shared/modal.component';
 import { ProjectContext } from './project.context';
 
@@ -9,9 +9,9 @@ import { ProjectContext } from './project.context';
   selector: 'app-task-dialog',
   imports: [FormsModule, ModalComponent],
   template: `
-  <app-modal [heading]="task() ? 'Ticket' : 'New ticket'"  (closed)="closed.emit()">
-    <div class="grid gap-6">
-      <form id="task-form" class="grid content-start gap-4" (ngSubmit)="save()">
+  <app-modal [heading]="task() ? 'Ticket' : 'New ticket'" [wide]="true" (closed)="closed.emit()">
+    <div class="grid gap-6 sm:grid-cols-[minmax(0,1fr)_260px]">
+      <form id="task-form" class="grid content-start gap-4" (ngSubmit)="save()" (input)="schedule()" (change)="schedule()">
         <label class="label">Title <input class="input" name="title" [(ngModel)]="form.title" maxlength="140" required></label>
         <label class="label">Description <textarea class="input min-h-[120px]" name="description" [(ngModel)]="form.description" maxlength="5000"></textarea></label>
         <div class="grid gap-4 sm:grid-cols-2">
@@ -33,6 +33,45 @@ import { ProjectContext } from './project.context';
         @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
       </form>
 
+      <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Ticket check">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-wide text-muted">Ticket check</p>
+          <p class="mt-1 text-xs text-muted">Compared with this project's history as you type. It never blocks saving.</p>
+        </div>
+        @if (check(); as c) {
+          <div>
+            <p class="flex items-baseline gap-2"><span class="font-display text-3xl" [class.text-bad]="c.quality.score < 50" [class.text-accent]="c.quality.score >= 50 && c.quality.score < 80" [class.text-ok]="c.quality.score >= 80">{{ c.quality.score }}</span><span class="text-muted">/100 ready to work on</span></p>
+            @if (c.quality.reasons.length) {
+              <ul class="mt-1.5 list-disc space-y-0.5 pl-4 text-xs text-muted">@for (r of c.quality.reasons; track r) { <li>{{ r }}</li> }</ul>
+            }
+          </div>
+          <div>
+            <p class="text-xs font-medium text-muted">How long tickets like this really took</p>
+            @if (c.reference.available) {
+              <p class="mt-1 font-medium">{{ c.reference.summary }}</p>
+              @if (c.reference.plan?.planned_days !== null && c.reference.plan) {
+                <p class="mt-1 text-xs" [class.text-bad]="c.reference.plan.under_planned" [class.text-muted]="!c.reference.plan.under_planned">{{ c.reference.plan.message }}</p>
+              }
+              <ul class="mt-2 space-y-1 text-xs text-muted">
+                @for (s of c.reference.similar; track s.id) { <li class="flex gap-2"><span class="w-10 shrink-0 text-fg">{{ s.days }}d</span><span class="truncate" [title]="s.title">{{ s.title }}</span></li> }
+              </ul>
+            } @else { <p class="mt-1 text-xs text-muted">{{ c.reference.reason }}</p> }
+          </div>
+          @if (c.slip_risk) {
+            <div>
+              <p class="text-xs font-medium text-muted">Chance of missing the due date</p>
+              <p class="mt-1 font-display text-2xl" [class.text-bad]="c.slip_risk.risk >= .6" [class.text-accent]="c.slip_risk.risk >= .35 && c.slip_risk.risk < .6" [class.text-ok]="c.slip_risk.risk < .35">{{ (c.slip_risk.risk * 100).toFixed(0) }}%</p>
+              @if (c.slip_risk.factors.length) { <p class="text-xs text-muted">{{ c.slip_risk.factors.join(' · ') }}</p> }
+            </div>
+          }
+          @if (c.duplicates.length) {
+            <div>
+              <p class="text-xs font-medium text-accent">Possible duplicates</p>
+              <ul class="mt-1 space-y-1 text-xs">@for (d of c.duplicates; track d.id) { <li>{{ (d.similarity * 100).toFixed(0) }}% · {{ d.title }} <span class="text-muted">({{ d.status }})</span></li> }</ul>
+            </div>
+          }
+        } @else { <p class="text-xs text-muted">{{ checkError() || 'Start typing to check this ticket.' }}</p> }
+      </aside>
     </div>
 
     <ng-container footer>
@@ -42,8 +81,13 @@ import { ProjectContext } from './project.context';
     </ng-container>
   </app-modal>`,
 })
-export class TaskDialog implements OnInit {
+export class TaskDialog implements OnInit, OnDestroy {
   private ctx = inject(ProjectContext);
+  private api = inject(Api);
+  private timer: ReturnType<typeof setTimeout> | undefined;
+  private seq = 0;
+  readonly check = signal<TicketCheck | null>(null);
+  readonly checkError = signal('');
   readonly task = input<Task | null>(null);
   readonly closed = output<void>();
   readonly statuses = STATUSES;
@@ -58,6 +102,29 @@ export class TaskDialog implements OnInit {
     if (t) {
       this.form = { title: t.title, description: t.description, owner: t.owner, due: t.due ?? '', status: t.status,
         priority: t.priority, kind: t.kind_source === 'label' ? t.kind : null };
+    }
+    this.runCheck();
+  }
+
+  ngOnDestroy() { clearTimeout(this.timer); this.seq++; }
+
+  /** Debounced write-time check: waits 600 ms after the last keystroke. */
+  schedule() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.runCheck(), 600);
+  }
+
+  private async runCheck() {
+    const seq = ++this.seq;
+    const f = this.form;
+    try {
+      const r = await this.api.post<TicketCheck>(`/projects/${this.ctx.id()}/ticket-check`, {
+        title: f.title, description: f.description, owner: f.owner, due: f.due || null, priority: f.priority,
+        kind: f.kind || null, task_id: this.task()?.id ?? null,
+      });
+      if (seq === this.seq) { this.check.set(r); this.checkError.set(''); }
+    } catch (e) {
+      if (seq === this.seq) this.checkError.set(errorMessage(e));
     }
   }
 
