@@ -23,8 +23,8 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="SlipCast API",
-    version="0.5.1",
-    description="Delivery analytics for software teams. Phase 1: projects, ticket history, CSV import.",
+    version="1.0.0",
+    description="Delivery analytics for software teams: flow metrics, scored forecasts and write-time slip risk.",
     lifespan=lifespan,
 )
 

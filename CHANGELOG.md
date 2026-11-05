@@ -4,6 +4,34 @@ All notable changes to SlipCast are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] - 2026-11-05
+
+The first complete release: forecasting, the differentiators, models, advice and exports.
+
+### Added
+- **Flow analytics:** cycle time percentiles, 26 weeks of throughput, a 120-day cumulative
+  flow diagram rebuilt from status events, breakdowns by type, theme and owner, and aging work.
+- **Monte Carlo forecast:** 10,000 simulations from the last 12 complete weeks, target-date
+  probability, burn-up, and a weekly backtest.
+- **Reference-class forecast per ticket:** how long the 20 most similar finished tickets really
+  took, compared with the plan.
+- **Write-time ticket check:** quality score, reference class, slip risk and duplicates while a
+  ticket is typed, plus a suggested rewrite.
+- **Forecast ledger:** every forecast is stored and scored automatically; the Forecast tab shows
+  hit rate and calibration, and the demo replays history to show a real track record.
+- **Models:** ticket-type classifier, theme clustering, duplicate detection, quality score and
+  a slip-risk model, all evaluated on time-based splits against baselines on a Model
+  evaluation page.
+- **Advice layer:** optional Groq LLM that turns numbered findings into validated suggestions
+  and a weekly status report, with rule-based fallback, rate limits, privacy mode and feedback.
+- **Exports:** Excel workbook and tidy CSVs for Tableau and Power BI, with a BI guide.
+- **Notebooks:** exploratory analysis and model evaluation, saved with outputs.
+- Docs: deployment guide (Neon + Render + Vercel, or Cloud Run) and a two-minute demo script.
+
+### Fixed
+- Demo data: tickets that bounced back to Planned could record "done" before being picked up
+  again, so their history disagreed with their status.
+
 ## [0.5.1] - 2026-11-05
 
 ### Changed
