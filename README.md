@@ -43,6 +43,17 @@ a foundation and competes on four things:
 
 ## Feature tour
 
+### Pages
+A public **landing page** with the pitch and a one-click demo, a **dashboard** with a card per
+project (health, open tickets, 85% forecast date, high-risk count), **Imports** with every past
+CSV import and its data-quality report, **Settings** (name, privacy mode, theme, AI provider
+status), a plain-language **About** page explaining each method, and a friendly 404. Signed-in
+pages share a top navigation bar that collapses to a menu on mobile; every page is lazy-loaded.
+
+| Landing page | Dashboard | Imports |
+|---|---|---|
+| ![Landing page](docs/screenshots/landing.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Imports](docs/screenshots/imports.png) |
+
 ### Write-time ticket check
 As a ticket is typed, a side panel scores how ready it is (0–100, with reasons), shows how long
 similar finished tickets took against the plan, predicts the chance of missing the due date
@@ -181,7 +192,7 @@ lazily and cached until a ticket changes or the day rolls over. Details in
 | Data and ML | pandas, NumPy, scikit-learn, openpyxl |
 | LLM (optional) | Groq (`llama-3.3-70b-versatile`) through a validated, single-call advice layer |
 | Database | PostgreSQL (Neon in production), SQLite for local development and tests |
-| Quality | pytest (77 tests, including tenant isolation for every endpoint and a fake LLM), Ruff, GitHub Actions with Postgres and `alembic check` |
+| Quality | pytest (82 tests, including tenant isolation for every endpoint and a fake LLM), Ruff, GitHub Actions with Postgres and `alembic check` |
 | Deploy | Docker, Render or Google Cloud Run (API), Vercel or Cloud Run (web) |
 
 ## Run it locally
@@ -216,7 +227,7 @@ Sign up, then click **Demo data** in the sidebar, or **Import CSV** with your ow
 
 ```bash
 cd backend
-pytest                                   # 77 tests
+pytest                                   # 82 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -227,9 +238,11 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/auth/register`, `/auth/login`; GET `/auth/me` | Accounts and personal workspaces |
+| POST | `/auth/register`, `/auth/login`; GET, PATCH `/auth/me` | Accounts, personal workspaces, display name |
+| GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |
 | POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project` | CSV import with quality report; demo project |
+| GET | `/workspaces/{id}/imports`, `/imports/{id}` | Past imports and their data-quality reports |
 | GET, PATCH, DELETE | `/projects/{id}`; GET `/projects/{id}/insights` | Project and rule-based health |
 | GET, POST | `/projects/{id}/tasks`; PATCH, DELETE `/tasks/{id}` | Tickets (status changes are recorded) |
 | GET | `/projects/{id}/analytics/overview`, `/flow`, `/forecast?target=` | Flow metrics and Monte Carlo forecast |

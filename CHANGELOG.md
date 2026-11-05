@@ -4,6 +4,18 @@ All notable changes to SlipCast are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Multi-page app: public landing page, dashboard, imports history, settings, about page and
+  a 404 page, with a top navigation bar (menu on mobile). Every page is lazy-loaded.
+- Import history: each CSV import's data-quality report is stored (migration 0005) and listed.
+- Light theme alongside the new default Dusk theme, switchable in the sidebar and settings.
+- `PATCH /auth/me` (display name) and `GET /auth/ai-status`.
+
+### Changed
+- Softer, more colourful Dusk palette with colour accents; text meets WCAG AA in both themes.
+
 ## [1.0.0] - 2026-11-05
 
 The first complete release: forecasting, the differentiators, models, advice and exports.
