@@ -17,7 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import Task, TaskEvent
-from app.services import flow, forecast
+from app.services import flow, forecast, ledger, nlp, reference_class
 from app.timeutil import naive_utc, now_utc
 
 TICKET_COLUMNS = (
@@ -122,6 +122,57 @@ class Analysis:
             self._forecasts[target] = result
         return self._forecasts[target]
 
+    # ---------- text ----------
+    @cached_property
+    def reference_index(self) -> reference_class.ReferenceIndex | None:
+        return reference_class.ReferenceIndex.build(self.tickets)
+
+    @cached_property
+    def text_index(self) -> nlp.TextIndex | None:
+        return nlp.TextIndex.build(self.tickets)
+
+    def reference(
+        self, title: str, description: str, planned_days: float | None = None, exclude_id: str | None = None
+    ) -> dict:
+        if self.reference_index is None:
+            return reference_class.unavailable(
+                "No finished tickets with text yet, so there is nothing to compare with."
+            )
+        return self.reference_index.query(title, description, planned_days, exclude_id)
+
+    def reference_for_task(self, task_id: str) -> dict:
+        row = self.tickets.loc[self.tickets["id"] == task_id].iloc[0]
+        planned = None if pd.isna(row["planned_days"]) else float(row["planned_days"])
+        out = self.reference(row["title"], row["description"], planned, exclude_id=task_id)
+        if row["finished"]:
+            out["actual_days"] = round(float(row["cycle_days"]), 1)
+        return out
+
+    def ticket_check(
+        self,
+        title: str,
+        description: str,
+        owner: str = "",
+        due: date | None = None,
+        priority: str = "medium",
+        kind: str | None = None,
+        exclude_id: str | None = None,
+    ) -> dict:
+        """Write-time check for a draft ticket: quality, reference class, slip risk, duplicates."""
+        score, reasons = nlp.quality(title, description, owner, due)
+        planned = (due - self.today).days if due else None
+        duplicates = (
+            self.text_index.similar_to(title, description, exclude_id=exclude_id)
+            if self.text_index is not None and (title.strip() or description.strip())
+            else []
+        )
+        return {
+            "quality": {"score": score, "reasons": reasons},
+            "reference": self.reference(title, description, planned, exclude_id),
+            "slip_risk": None,
+            "duplicates": duplicates,
+        }
+
     def overview(self) -> dict:
         t = self.tickets
         f = self.flow
@@ -172,6 +223,8 @@ def get_analysis(db: Session, project_id: str) -> Analysis:
             _cache.move_to_end(project_id)
             return hit[1]
     analysis = load(db, project_id, now)
+    if ledger.resolve(db, analysis):
+        db.commit()
     with _lock:
         _cache[project_id] = (key, analysis)
         _cache.move_to_end(project_id)

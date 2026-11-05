@@ -135,3 +135,16 @@ class StatusReportOut(BaseModel):
     report: str
     provider: str
     generated_at: datetime
+
+
+# ---------- analytics ----------
+class DraftIn(BaseModel):
+    """A ticket as it is being written; nothing is saved."""
+
+    title: str = Field(default="", max_length=140)
+    description: str = Field(default="", max_length=5000)
+    owner: str = Field(default="", max_length=40)
+    due: date | None = None
+    priority: Priority = "medium"
+    kind: Kind | None = None
+    task_id: str | None = Field(default=None, max_length=32, description="Set when editing a saved ticket")
