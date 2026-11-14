@@ -3,6 +3,7 @@ services:
   - type: web
     name: slipcast-api
     runtime: docker
+    region: singapore
     rootDir: backend
     healthCheckPath: /api/health
     envVars:
