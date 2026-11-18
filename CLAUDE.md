@@ -278,6 +278,105 @@ and are never installed in the API image.
 
 ---
 
+## 4b. Phase 4: Beyond tickets (approved by the owner, 2026-11-18)
+
+**Status:** Phases 1–3 are done and live (web `https://slip-cast.vercel.app`, API
+`https://slipcast-api.onrender.com`, Neon Postgres in Singapore). This phase widens the
+product. It is an approved change of direction, so do not stop to ask about it, but still
+ask before anything listed in section 3 (paid services, unlisted dependencies).
+
+**New one-line pitch:** "SlipCast predicts what will be late, for tickets, projects,
+shipments or stock, while there is still time to act, and proves how often it's right."
+
+**The rule that keeps this one product:** one engine, many templates. Every new kind of
+work is a *work item* with stages, a start, a promised date and a finish. Forecasting,
+reference classes, slip risk and the forecast ledger stay shared. A template only adds
+wording, stages, a few fields, a demo dataset and its own breakdowns. Never fork the
+engine per template.
+
+Do the tasks in order. Ship each as its own minor version with a CHANGELOG entry.
+
+### 4.0 Release v1.1.0 first
+- CHANGELOG `Unreleased` becomes `[1.1.0] - 2026-11-14`; version `1.1.0` in
+  `backend/app/main.py` and `web/package.json`; README "Live demo" line points at the
+  Vercel URL with a note that the first load can take up to a minute.
+- `docs/DEPLOY.md`: note `region` and `plan: free` in `render.yaml`, and that
+  `CORS_ORIGINS` must have no trailing slash.
+- Fix: clicking **Demo data** twice must not create a second demo project.
+- Acceptance: tag `v1.1.0` exists; CI green.
+
+### 4.1 Accounts and teams (v1.2)
+Approved new dependency: `httpx==0.28.1` (server-side OAuth token exchange). No auth SaaS.
+
+- **Sign in with Google and GitHub** (OAuth 2.0 authorization-code flow with `state`
+  and PKCE). New table `oauth_accounts` (user_id, provider, provider_user_id, email,
+  created_at; unique on provider + provider_user_id). `users.password_hash` becomes
+  nullable via a new migration. Matching email on an existing account links it only
+  when the provider says the email is verified.
+- Config: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`,
+  `GITHUB_CLIENT_SECRET`, `PUBLIC_WEB_URL`. Buttons are hidden when a provider isn't
+  configured, so local runs and CI work without keys.
+- **Teams:** invite by link (token, expires in 7 days, single use) to a workspace with
+  role `admin`, `member` or `viewer`. Viewers can read everything and change nothing.
+  Enforce roles in `deps.py`, not in routers. Isolation tests cover each role.
+- **Auth pages (each its own lazy route):** sign in, create account, accept invite,
+  OAuth callback, forgot password (shows "ask your workspace admin" until an email
+  service is approved), and Settings → Account (connected sign-in methods, change
+  password, sign out everywhere) and Settings → Team (members, roles, invite links).
+- Acceptance: a new user can sign in with Google or GitHub on the live site; an
+  invited viewer sees the board but gets 403 on any write; all old accounts still work.
+
+### 4.2 Work items and real-time engine (v1.3)
+- Rename "ticket" to "work item" in the UI copy only where a project's template is not
+  `software`. Keep the `tasks` table and the `app` package names.
+- New columns on `projects`: `template` (`software`, `project_work`, `shipments`,
+  `inventory`, `product_launch`; default `software`). New table `workflow_stages`
+  (project_id, key, label, order, category `todo|doing|blocked|done`). The engine maps
+  every stage to a category, so flow, forecast and risk code does not change.
+- New column `tasks.item_type` and a JSON column `tasks.attributes` for template fields.
+- **Event ingestion:** `POST /api/projects/{id}/events` with a per-project API key
+  (table `project_api_keys`, store only a hash, shown once). Body: external_id, stage,
+  occurred_at, optional fields. Idempotent on (external_id, stage, occurred_at). Creates
+  the item if it doesn't exist. Rate limit 600 per minute per key.
+- **Live screens:** `GET /api/projects/{id}/stream` as Server-Sent Events (auth by a
+  short-lived stream token in the query string). The board, Delivery and Forecast tabs
+  update without reload. The analysis cache invalidates on each event.
+- **Alerts:** when the P85 date moves by 2 or more days, or a new item scores high
+  risk, record an alert and show it in a bell menu. Outbound webhooks (Slack-compatible
+  JSON) per project are optional.
+- Acceptance: posting 50 events with `curl` updates an open browser within 2 seconds
+  and the forecast date moves; duplicate events change nothing.
+
+### 4.3 Templates (one minor version each, in this order)
+Each template ships with: stages, fields, a deterministic demo dataset of 300 to 500
+items, wording, its breakdowns, and a "small data" test. Show the template picker in
+the new-project dialog.
+
+1. **Software delivery+ (v1.4):** pull requests and releases from GitHub via a
+   repository webhook (signature verified with the webhook secret). PR stages: opened,
+   in review, approved, merged. Release stages: tagged, deployed. Adds review wait time,
+   PR-size reference classes, and the four DORA metrics on the Delivery tab.
+2. **Project work (v1.5):** tasks and client deliverables; stages To do, Doing, Review,
+   Done; fields client, deliverable, billable hours. Breakdowns by client.
+3. **Goods shipments (v1.6):** stages Ordered, Packed, Dispatched, In transit, Out for
+   delivery, Delivered, plus Exception. Fields origin, destination, carrier, promised
+   date, weight. Late-delivery risk by route and carrier; reference class "orders like
+   this on this route took 3 to 6 days". **Stage updates only: no live GPS, maps or
+   driver app.**
+4. **Inventory (v1.7):** items are stock-keeping units, not jobs. Track stock-on-hand
+   events (received, sold or used, adjusted). Forecast the **stockout date** with Monte
+   Carlo on daily demand (same engine, demand instead of throughput), reorder point, and
+   whether a pending purchase order arrives in time. The ledger scores stockout forecasts.
+5. **Product launch (v1.8):** a product as milestones through stage gates (Idea,
+   Design, Build, Test, Launch), each milestone holding work items. Forecast per
+   milestone and for launch day; show which gate is the bottleneck.
+
+### 4.4 Out of scope for Phase 4
+Live GPS tracking, driver or courier apps, payments and billing, payroll, chat, time
+tracking, and a full sprint board. Each is a separate product with large competitors.
+
+---
+
 ## 5. Definition of done (every task)
 
 - Lint, migrations check, tests and web build all pass locally and in CI.
