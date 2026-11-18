@@ -31,7 +31,12 @@ upgraded automatically. `GROQ_API_KEY` is optional; without it, advice is rule-b
 1. Sign in at <https://render.com> with GitHub and allow access to the `SlipCast` repository.
 2. **New → Blueprint**, pick the repository and branch `main`. Render reads `render.yaml` and
    proposes a web service called `slipcast-api` (Docker, root directory `backend`, health check
-   `/api/health`).
+   `/api/health`). If the repository isn't listed, click **Configure account** and give
+   Render's GitHub app access to it.
+
+   `render.yaml` sets `region: singapore` and `plan: free`. Change the region to match your
+   Neon region before the first deploy (Render can't move a service later). Keep
+   `plan: free`: without it Render assumes a paid instance and asks for a card.
 3. Render asks for the values marked `sync: false`:
    - `DATABASE_URL`: the Neon string from step 1.
    - `CORS_ORIGINS`: leave as `http://localhost:4200` for now; you'll set it after step 3.
@@ -40,8 +45,8 @@ upgraded automatically. `GROQ_API_KEY` is optional; without it, advice is rule-b
    `AUTO_CREATE_TABLES=false` are already set.
 4. Click **Apply**. The first build takes 5–10 minutes (it installs pandas and scikit-learn).
 5. When the deploy is live, open `https://slipcast-api-XXXX.onrender.com/api/health`. You should
-   see `{"status":"ok","version":"1.0.0"}`. In the logs you should see four lines
-   `Running upgrade … 0001 … 0004`.
+   see `{"status":"ok","version":"1.1.0"}`. In the logs you should see the
+   `Running upgrade` lines for each migration.
 6. Copy the service URL (without `/api`). That is your API URL.
 
 > Free Render services sleep after about 15 minutes idle; the first request after that takes
@@ -55,6 +60,7 @@ upgraded automatically. `GROQ_API_KEY` is optional; without it, advice is rule-b
    ```
    Commit and push this change to `main`.
 2. Sign in at <https://vercel.com> with GitHub → **Add New → Project** → import `SlipCast`.
+   If it isn't listed, click **Adjust GitHub App Permissions** and give Vercel access to it.
 3. Set **Root Directory** to `web`. Vercel detects Angular; `web/vercel.json` already sets the
    build command (`npm run build`), output directory (`dist`) and the SPA rewrite.
 4. Click **Deploy**. When it finishes, copy the production URL, for example
@@ -62,8 +68,11 @@ upgraded automatically. `GROQ_API_KEY` is optional; without it, advice is rule-b
 
 ### 4. Connect them
 
-1. In Render → `slipcast-api` → **Environment**, set `CORS_ORIGINS` to your Vercel URL with no
-   trailing slash, e.g. `https://slipcast.vercel.app`. Several origins can be comma-separated.
+1. In Render → `slipcast-api` → **Environment**, set `CORS_ORIGINS` to your Vercel production
+   URL, e.g. `https://slip-cast.vercel.app`. It must match the address bar exactly: `https://`,
+   no trailing slash, no path. `https://slip-cast.vercel.app/` fails with "Can't reach the
+   SlipCast API". Use the short production domain, not a per-deploy URL with random
+   letters. Several origins can be comma-separated with no spaces.
 2. **Save changes**; Render redeploys automatically.
 3. Open the Vercel URL, create an account, click **Demo data**, and check that every tab loads.
    If the browser console shows a CORS error, the `CORS_ORIGINS` value does not exactly match
@@ -160,8 +169,8 @@ Open the web URL, sign up, load the demo data and check every tab.
 - **Make the repository public** on GitHub: *Settings → General → Danger Zone → Change
   visibility*. Check first that no secrets were ever committed (`.env` is git-ignored; the
   only keys live in Render, Vercel or Secret Manager).
-- **Tag the release** is already done (`v1.0.0`); create a GitHub Release from the tag and paste
-  the 1.0.0 section of `CHANGELOG.md`.
+- **Tag each release** (`git tag -a v1.1.0 -m "SlipCast 1.1.0"` and push the tag), then create
+  a GitHub Release from the tag and paste that version's section of `CHANGELOG.md`.
 
 ## Troubleshooting
 

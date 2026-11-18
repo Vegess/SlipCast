@@ -6,6 +6,10 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-18
+
+Live at <https://slip-cast.vercel.app> (web on Vercel, API on Render, Postgres on Neon).
+
 ### Added
 - Multi-page app: public landing page, dashboard, imports history, settings, about page and
   a 404 page, with a top navigation bar (menu on mobile). Every page is lazy-loaded.
@@ -13,7 +17,15 @@ All notable changes to SlipCast are recorded here. The format follows
 - Light theme alongside the new default Dusk theme, switchable in the sidebar and settings.
 - `PATCH /auth/me` (display name) and `GET /auth/ai-status`.
 
+### Fixed
+- **Demo data** no longer creates a second demo project: the endpoint returns the
+  workspace's existing demo (HTTP 200) instead. It happened when someone signed up from
+  "Try the demo" and then clicked **Demo data** again.
+
 ### Changed
+- Deployment: `render.yaml` pins the Singapore region and the free plan, so Render no
+  longer asks for payment details; the web app points at the live API.
+- README: live demo link and a Windows (Command Prompt) setup section.
 - Softer, more colourful Dusk palette with colour accents; text meets WCAG AA in both themes.
 
 ## [1.0.0] - 2026-11-05
