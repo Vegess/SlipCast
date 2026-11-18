@@ -16,6 +16,13 @@ Live at <https://slip-cast.vercel.app> (web on Vercel, API on Render, Postgres o
 - Import history: each CSV import's data-quality report is stored (migration 0005) and listed.
 - Light theme alongside the new default Dusk theme, switchable in the sidebar and settings.
 - `PATCH /auth/me` (display name) and `GET /auth/ai-status`.
+- **Motion:** page and tab changes animate with the browser's View Transitions (the tab
+  underline slides between tabs), charts draw themselves in, board cards and dialogs rise
+  into place and lift under the pointer, the landing page reveals sections as you scroll and
+  counts its headline numbers up, the sign-in chart draws its history and forecast cone,
+  and loading states show shimmer placeholders. Built with Angular's router, CSS and two
+  small directives, so no new dependency. Everything is off when the system asks for
+  reduced motion.
 
 ### Fixed
 - **Demo data** no longer creates a second demo project: the endpoint returns the

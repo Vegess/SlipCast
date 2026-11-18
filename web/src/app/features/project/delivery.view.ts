@@ -108,7 +108,15 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
         </section>
       }
     }
-  } @else if (!flow.error()) { <p class="note">Crunching the numbers…</p> }`,
+  } @else if (!flow.error()) {
+    <div role="status" aria-label="Crunching the numbers" class="space-y-5">
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) { <div class="skeleton h-16"></div> }
+      </div>
+      <div class="grid gap-5 lg:grid-cols-2"><div class="skeleton h-72"></div><div class="skeleton h-72"></div></div>
+      <p class="note">Crunching the numbers…</p>
+    </div>
+  }`,
 })
 export class DeliveryView {
   private api = inject(Api);

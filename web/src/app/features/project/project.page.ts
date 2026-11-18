@@ -13,7 +13,7 @@ import { ProjectContext } from './project.context';
       <div class="mb-4 rounded-lg border border-bad/40 bg-bad/10 px-4 py-2.5 text-sm text-bad">{{ error() }}</div>
     }
     @if (ctx.project(); as p) {
-      <header class="mb-6 border-b border-line pb-5">
+      <header class="anim-fade mb-6 border-b border-line pb-5">
         <div class="flex flex-wrap items-start gap-4">
           <div class="min-w-0 flex-1">
             <input [value]="p.name" aria-label="Project name" maxlength="80" (keydown.enter)="$any($event.target).blur()"
@@ -27,14 +27,21 @@ import { ProjectContext } from './project.context';
         </div>
         <nav class="-mb-5 mt-5 flex gap-1 overflow-x-auto" aria-label="Project views">
           @for (t of tabs; track t[0]) {
-            <a [routerLink]="t[0]" routerLinkActive="!border-accent !text-fg" ariaCurrentWhenActive="page"
-               class="shrink-0 border-b-2 border-transparent px-3 pb-2.5 text-sm font-medium text-muted hover:text-fg">{{ t[1] }}</a>
+            <a [routerLink]="t[0]" routerLinkActive="tab-active !text-fg" ariaCurrentWhenActive="page"
+               class="tab-link shrink-0 border-b-2 border-transparent px-3 pb-2.5 text-sm font-medium text-muted transition-colors hover:text-fg">{{ t[1] }}</a>
           }
         </nav>
       </header>
       <router-outlet />
     } @else if (!error()) {
-      <p class="note">Loading project…</p>
+      <div class="space-y-4" role="status" aria-label="Loading project">
+        <div class="skeleton h-10 w-2/3 max-w-md"></div>
+        <div class="skeleton h-4 w-1/3 max-w-xs"></div>
+        <div class="skeleton mt-6 h-24 w-full"></div>
+        <div class="grid gap-4 sm:grid-cols-4">
+          @for (i of [0, 1, 2, 3]; track i) { <div class="skeleton h-48"></div> }
+        </div>
+      </div>
     }
   </div>`,
 })
