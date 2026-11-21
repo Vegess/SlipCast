@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Api, errorMessage } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { Project } from '../../core/models';
@@ -37,7 +37,7 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
         <h2 class="section-title">No projects yet</h2>
         <p class="note mt-1">Load six months of sample tickets to explore, or import a CSV export from Jira, GitHub Issues, Trello or Linear.</p>
         <div class="mt-4 flex flex-wrap gap-2">
-          <button class="btn btn-primary" (click)="loadDemo()" [disabled]="busy()">{{ busy() ? 'Loading…' : 'Load demo data' }}</button>
+          <button class="btn btn-primary" (click)="loadDemo()" [disabled]="busy() || !auth.canEdit()">{{ busy() ? 'Loading…' : 'Load demo data' }}</button>
           <a routerLink="/projects" class="btn">Import a CSV</a>
         </div>
       </section>
@@ -87,7 +87,9 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
 export class DashboardPage implements OnInit {
   private api = inject(Api);
   private store = inject(WorkspaceStore);
-  private auth = inject(AuthService);
+  readonly auth = inject(AuthService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   readonly health = HEALTH;
   readonly longDate = longDate;
   readonly cards = signal<Card[]>([]);
@@ -98,6 +100,14 @@ export class DashboardPage implements OnInit {
   firstName() { return this.auth.user()?.name.split(' ')[0] ?? ''; }
 
   async ngOnInit() {
+    // "Try the demo" via Google or GitHub lands here with ?demo=1: open the demo project.
+    if (this.route.snapshot.queryParamMap.get('demo') === '1' && this.auth.canEdit()) {
+      try {
+        const p = await this.api.post<Project>(`/workspaces/${this.store.workspaceId()}/demo-project`);
+        await this.router.navigate(['/projects', p.id, 'board'], { replaceUrl: true });
+        return;
+      } catch (e) { this.error.set(errorMessage(e)); }
+    }
     try {
       await this.store.load();
     } catch (e) { this.error.set(errorMessage(e)); }

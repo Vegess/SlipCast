@@ -65,7 +65,7 @@ def create_project(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectOut:
-    require_membership(db, user, workspace_id)
+    require_membership(db, user, workspace_id, minimum="member")
     project = Project(
         workspace_id=workspace_id,
         name=body.name.strip(),
@@ -90,7 +90,7 @@ def update_project(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ProjectOut:
-    project = get_project_for_user(db, user, project_id)
+    project = get_project_for_user(db, user, project_id, minimum="member")
     for field, value in body.model_dump(exclude_unset=True).items():
         if value is not None:
             setattr(project, field, value.strip() if isinstance(value, str) else value)
@@ -100,7 +100,7 @@ def update_project(
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_project(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
-    project = get_project_for_user(db, user, project_id)
+    project = get_project_for_user(db, user, project_id, minimum="admin")
     # Keep the import report but drop the link (explicit, so SQLite behaves like Postgres).
     db.execute(update(ImportRecord).where(ImportRecord.project_id == project.id).values(project_id=None))
     db.delete(project)

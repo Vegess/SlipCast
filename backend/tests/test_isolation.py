@@ -56,6 +56,23 @@ def test_cross_tenant_access_is_denied(client, make_user):
     )
     assert client.get(f"/api/workspaces/{alice['workspace_id']}/imports", headers=bh).status_code == 404
     assert client.delete(f"/api/projects/{p['id']}", headers=bh).status_code == 404
+    ws, alice_id = alice["workspace_id"], alice["user"]["id"]
+    assert client.get(f"/api/workspaces/{ws}/members", headers=bh).status_code == 404
+    assert (
+        client.patch(f"/api/workspaces/{ws}/members/{alice_id}", json={"role": "viewer"}, headers=bh).status_code == 404
+    )
+    assert client.delete(f"/api/workspaces/{ws}/members/{alice_id}", headers=bh).status_code == 404
+    assert client.post(f"/api/workspaces/{ws}/invites", json={"role": "admin"}, headers=bh).status_code == 404
+    assert client.get(f"/api/workspaces/{ws}/invites", headers=bh).status_code == 404
+    invite = client.post(f"/api/workspaces/{ws}/invites", json={"role": "viewer"}, headers=alice["headers"]).json()
+    assert client.delete(f"/api/workspaces/{ws}/invites/{invite['id']}", headers=bh).status_code == 404
+    bob_invite = client.post(
+        f"/api/workspaces/{bob['workspace_id']}/invites", json={"role": "viewer"}, headers=bh
+    ).json()
+    # an invite id from Bob's workspace can't be used to delete through Alice's, or vice versa
+    assert (
+        client.delete(f"/api/workspaces/{ws}/invites/{bob_invite['id']}", headers=alice["headers"]).status_code == 404
+    )
 
     # Alice's data is untouched
     tasks = client.get(f"/api/projects/{p['id']}/tasks", headers=alice["headers"]).json()

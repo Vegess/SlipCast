@@ -6,6 +6,31 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-21
+
+Accounts and teams (Phase 4.1).
+
+### Added
+- **Sign in with Google and GitHub** (OAuth 2.0 with state and PKCE). The API runs the whole
+  flow, so no provider secret or token reaches the browser. A verified email address links
+  to an existing account; an unverified one never does. Buttons only appear when the server
+  has that provider's keys.
+- **Teams:** invite links (single use, 7 days) with three roles. Viewers can see everything
+  and change nothing; members add and edit work; admins also delete projects and manage the
+  team. Roles are enforced in the API's shared access checks, and every write is tested
+  against a viewer.
+- **New pages:** create account (`/signup`), sign-in callback, accept invite, forgot password,
+  and Settings tabs for General, Account (sign-in methods, set or change password, sign out
+  everywhere) and Team (members, roles, invite links).
+- **Workspace switcher** in the sidebar for people in more than one workspace, and a
+  view-only notice that hides editing controls for viewers.
+- Sign-in now returns you to the page you were heading to, e.g. an invite.
+- Migration 0006: `oauth_accounts`, `invites`, `users.token_version`, nullable password.
+
+### Changed
+- The personal workspace role is now `admin` (was `owner`).
+- Changing your password signs you out on every other device.
+
 ## [1.1.0] - 2026-11-18
 
 Live at <https://slip-cast.vercel.app> (web on Vercel, API on Render, Postgres on Neon).

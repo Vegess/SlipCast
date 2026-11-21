@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { Api } from './api.service';
 import { AuthService } from './auth.service';
 import { Project } from './models';
@@ -22,6 +22,14 @@ export class WorkspaceStore {
     try { localStorage.setItem(PRIVACY_KEY, on ? '1' : '0'); } catch { /* storage blocked */ }
   }
   readonly workspaceId = computed(() => this.auth.workspace()?.id ?? null);
+
+  constructor() {
+    // Switching workspace reloads its project list.
+    effect(() => {
+      const ws = this.workspaceId();
+      untracked(() => { if (ws) this.load().catch(() => this.projects.set([])); else this.projects.set([]); });
+    });
+  }
 
   async load() {
     const ws = this.workspaceId();

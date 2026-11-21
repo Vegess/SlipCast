@@ -47,6 +47,43 @@ class ProfileUpdate(BaseModel):
 class MeOut(BaseModel):
     user: UserOut
     workspaces: list[WorkspaceOut]
+    has_password: bool = True
+    sign_in_methods: list[str] = []  # "password", "google", "github"
+
+
+class PasswordChange(BaseModel):
+    # Not needed when the account has no password yet (it signed up with Google or GitHub).
+    current_password: str = Field(default="", max_length=64)
+    new_password: str = Field(min_length=8, max_length=64)
+
+
+# ---------- teams ----------
+class MemberOut(BaseModel):
+    user_id: str
+    name: str
+    email: str
+    role: str
+    is_you: bool
+
+
+class RoleIn(BaseModel):
+    role: str = Field(pattern="^(admin|member|viewer)$")
+
+
+class InviteOut(BaseModel):
+    id: str
+    role: str
+    created_at: datetime
+    expires_at: datetime
+    url: str | None = None  # only in the response that creates the invite
+
+
+class InvitePreview(BaseModel):
+    workspace_name: str
+    role: str
+    invited_by: str
+    valid: bool
+    reason: str = ""
 
 
 # ---------- projects ----------

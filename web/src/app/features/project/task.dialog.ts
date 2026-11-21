@@ -5,12 +5,13 @@ import { KIND_LABEL, STATUSES, Task, TicketCheck } from '../../core/models';
 import { ModalComponent } from '../../shared/modal.component';
 import { WorkspaceStore } from '../../core/workspace.store';
 import { ProjectContext } from './project.context';
+import { AuthService } from '../../core/auth.service';
 
 @Component({
   selector: 'app-task-dialog',
   imports: [FormsModule, ModalComponent],
   template: `
-  <app-modal [heading]="task() ? 'Ticket' : 'New ticket'" [wide]="true" (closed)="closed.emit()">
+  <app-modal [heading]="task() ? (auth.canEdit() ? 'Ticket' : 'Ticket (view only)') : 'New ticket'" [wide]="true" (closed)="closed.emit()">
     <div class="grid gap-6 sm:grid-cols-[minmax(0,1fr)_260px]">
       <form id="task-form" class="grid content-start gap-4" (ngSubmit)="save()" (input)="schedule()" (change)="schedule()">
         <label class="label">Title <input class="input" name="title" [(ngModel)]="form.title" maxlength="140" required></label>
@@ -87,14 +88,20 @@ import { ProjectContext } from './project.context';
     </div>
 
     <ng-container footer>
-      @if (task()) { <button class="btn btn-ghost mr-auto text-bad" (click)="remove()">Delete</button> }
-      <button class="btn" (click)="closed.emit()">Cancel</button>
-      <button class="btn btn-primary" form="task-form" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      @if (auth.canEdit()) {
+        @if (task()) { <button class="btn btn-ghost mr-auto text-bad" (click)="remove()">Delete</button> }
+        <button class="btn" (click)="closed.emit()">Cancel</button>
+        <button class="btn btn-primary" form="task-form" [disabled]="saving()">{{ saving() ? 'Saving…' : 'Save' }}</button>
+      } @else {
+        <span class="mr-auto text-xs text-muted">View only: changes can't be saved.</span>
+        <button class="btn" (click)="closed.emit()">Close</button>
+      }
     </ng-container>
   </app-modal>`,
 })
 export class TaskDialog implements OnInit, OnDestroy {
   private ctx = inject(ProjectContext);
+  readonly auth = inject(AuthService);
   private api = inject(Api);
   private timer: ReturnType<typeof setTimeout> | undefined;
   private seq = 0;
@@ -162,6 +169,7 @@ export class TaskDialog implements OnInit, OnDestroy {
   }
 
   async save() {
+    if (!this.auth.canEdit()) return;
     if (!this.form.title.trim()) { this.error.set('Add a title to save the ticket.'); return; }
     this.saving.set(true);
     const body: Record<string, unknown> = { ...this.form, due: this.form.due || null };

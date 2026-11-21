@@ -44,7 +44,7 @@ def create_demo_project(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    require_membership(db, user, workspace_id)
+    require_membership(db, user, workspace_id, minimum="member")
     # One demo per workspace: a second click (or signing up from "Try the demo" and then
     # clicking Demo data) returns the existing project instead of making a duplicate.
     existing = db.scalar(
@@ -79,7 +79,7 @@ async def import_csv(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
-    require_membership(db, user, workspace_id)
+    require_membership(db, user, workspace_id, minimum="member")
     raw = await file.read(importer.MAX_BYTES + 1)
     import pandas as pd
 

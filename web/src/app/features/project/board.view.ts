@@ -4,6 +4,7 @@ import { Api, errorMessage } from '../../core/api.service';
 import { KIND_LABEL, STATUSES, Status, Task } from '../../core/models';
 import { shortDate, todayISO } from '../../shared/format';
 import { ProjectContext } from './project.context';
+import { AuthService } from '../../core/auth.service';
 import { KindChip } from '../../shared/kind-chip.component';
 import { TaskDialog } from './task.dialog';
 
@@ -33,7 +34,7 @@ interface Health {
   }
   <div class="mb-4 flex flex-wrap items-center gap-3">
     <input class="input max-w-xs" placeholder="Filter tickets…" [ngModel]="filter()" (ngModelChange)="filter.set($event)" aria-label="Filter tickets">
-    <button class="btn ml-auto" (click)="open(null)">+ Add ticket</button>
+    @if (auth.canEdit()) { <button class="btn ml-auto" (click)="open(null)">+ Add ticket</button> }
   </div>
   @if (error()) { <p class="mb-3 text-sm text-bad">{{ error() }}</p> }
   <div class="flex gap-4 overflow-x-auto pb-2">
@@ -47,7 +48,7 @@ interface Health {
              [class.ring-info]="over() === s.id" [class.ring-line]="over() !== s.id"
              (dragover)="$event.preventDefault(); over.set(s.id)" (dragleave)="over.set(null)" (drop)="drop($event, s.id)">
           @for (t of columns()[s.id].items; track t.id; let i = $index) {
-            <button draggable="true" (dragstart)="$event.dataTransfer?.setData('text/plain', t.id)" (click)="open(t)"
+            <button [draggable]="auth.canEdit()" (dragstart)="$event.dataTransfer?.setData('text/plain', t.id)" (click)="open(t)"
                     [style.--i]="i < 10 ? i : 10"
                     class="anim-rise lift block w-full rounded-lg border border-line border-l-[3px] bg-panel px-3 py-2.5 text-left hover:border-muted/60"
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
@@ -62,8 +63,10 @@ interface Health {
           @if (columns()[s.id].total > columns()[s.id].items.length) {
             <p class="px-1 text-xs text-muted">Showing the {{ columns()[s.id].items.length }} most recent of {{ columns()[s.id].total }}.</p>
           }
-          <input class="input mt-auto bg-transparent" placeholder="Quick add…" maxlength="140" [attr.aria-label]="'Quick add to ' + s.label"
-                 (keydown.enter)="quickAdd($any($event.target), s.id)">
+          @if (auth.canEdit()) {
+            <input class="input mt-auto bg-transparent" placeholder="Quick add…" maxlength="140" [attr.aria-label]="'Quick add to ' + s.label"
+                   (keydown.enter)="quickAdd($any($event.target), s.id)">
+          }
         </div>
       </section>
     }
@@ -74,6 +77,7 @@ interface Health {
 })
 export class BoardView {
   readonly ctx = inject(ProjectContext);
+  readonly auth = inject(AuthService);
   private api = inject(Api);
   readonly health = signal<Health | null>(null);
   readonly healthLabel = { on_track: 'On track', at_risk: 'At risk', off_track: 'Off track' };
@@ -115,6 +119,7 @@ export class BoardView {
   drop(ev: DragEvent, status: Status) {
     ev.preventDefault();
     this.over.set(null);
+    if (!this.auth.canEdit()) return;
     const id = ev.dataTransfer?.getData('text/plain');
     const t = this.ctx.tasks().find((x) => x.id === id);
     if (t && t.status !== status) this.ctx.updateTask(t.id, { status }).catch((e) => this.error.set(errorMessage(e)));
