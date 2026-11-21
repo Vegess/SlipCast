@@ -6,6 +6,35 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-21
+
+The real-time engine (Phase 4.2).
+
+### Added
+- **Event API:** `POST /api/projects/{id}/events` takes one event or up to 500 from another
+  system (an order app, a courier feed, CI, a script) with a per-project API key in
+  `X-SlipCast-Key`. Unknown items are created; an exact repeat (same id, stage and time)
+  changes nothing; an event that changes nothing is counted as unchanged; late, out-of-order
+  events are kept without moving an item backwards. 600 events a minute per key.
+- **Live screens:** the board, Delivery and Forecast tabs update by themselves over
+  Server-Sent Events, including changes made by teammates in the app. Changed cards glow
+  briefly, and the project header shows a Live dot. In a test, 50 events reached an open
+  board in under a second.
+- **Alerts:** a bell in the top bar and toasts when the 85% finish date moves by 2 days or
+  more, or new work looks likely to miss its date (grouped when a batch brings many).
+- **Live feed tab:** an animated diagram of how events flow, the project's stages, API keys
+  (admins), copy-paste examples for curl and PowerShell, and everything that arrived live.
+- **Stages per project:** each project has its own stages mapped to the four states the
+  engine uses, ready for the Ship and Serve modules.
+- **Privacy policy and Terms of use** pages, linked from sign-in and the landing page.
+- Landing page: an animated "how SlipCast reads a ticket" diagram.
+- Migration 0007: `workflow_stages`, `project_api_keys`, `ingested_events`, `alerts`, and
+  `template`, `last_p85`, `stage`, `item_type`, `attributes` columns.
+
+### Fixed
+- Sign-in keys pasted with a trailing space or line break (which broke GitHub sign-in) are
+  now trimmed.
+
 ## [1.2.0] - 2026-11-21
 
 Accounts and teams (Phase 4.1).

@@ -22,6 +22,12 @@ import { AuthService } from '../../core/auth.service';
                    class="w-full max-w-3xl rounded-md bg-transparent font-display text-3xl font-bold hover:bg-raised/50 focus:bg-raised/50 focus:outline-none sm:text-4xl">
             <p class="mt-1 text-sm text-muted">
               @if (p.goal) { {{ p.goal }} · } {{ p.done_count }} of {{ p.task_count }} tickets done
+              <span class="ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 align-middle text-xs"
+                    [class]="ctx.live() === 'live' ? 'bg-ok/10 text-ok-strong' : 'bg-raised text-muted'"
+                    [title]="ctx.live() === 'live' ? 'This page updates by itself when anything changes' : 'Connecting to live updates'">
+                <span class="live-dot" [class]="ctx.live() === 'live' ? 'bg-ok' : 'bg-muted'" aria-hidden="true"></span>
+                {{ ctx.live() === 'live' ? 'Live' : 'Connecting…' }}
+              </span>
             </p>
           </div>
           @if (auth.isAdmin()) { <button class="btn btn-ghost text-muted" (click)="remove()">Delete project</button> }
@@ -52,7 +58,7 @@ export class ProjectPage {
   private router = inject(Router);
   readonly projectId = input.required<string>();
   readonly error = signal('');
-  readonly tabs = [['board', 'Board'], ['delivery', 'Delivery'], ['forecast', 'Forecast'], ['text', 'Text insights'], ['advice', 'Advice'], ['evaluation', 'Model evaluation']] as const;
+  readonly tabs = [['board', 'Board'], ['delivery', 'Delivery'], ['forecast', 'Forecast'], ['text', 'Text insights'], ['advice', 'Advice'], ['evaluation', 'Model evaluation'], ['live', 'Live feed']] as const;
 
   constructor() {
     effect(() => {

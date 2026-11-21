@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import Base, engine
-from app.routers import advice, analytics, auth, data, projects, tasks, team
+from app.routers import advice, analytics, auth, data, live, projects, tasks, team
 
 logging.basicConfig(level=logging.INFO)
 settings = get_settings()
@@ -23,7 +23,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(
     title="SlipCast API",
-    version="1.2.0",
+    version="1.3.0",
     description="Delivery analytics for software teams: flow metrics, scored forecasts and write-time slip risk.",
     lifespan=lifespan,
 )
@@ -33,11 +33,20 @@ app.add_middleware(
     allow_origins=settings.cors_origin_list,
     allow_credentials=False,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-SlipCast-Key"],
     expose_headers=["Content-Disposition"],  # lets the web app name downloaded exports
 )
 
-for r in (auth.router, team.router, projects.router, tasks.router, data.router, analytics.router, advice.router):
+for r in (
+    auth.router,
+    team.router,
+    projects.router,
+    tasks.router,
+    data.router,
+    analytics.router,
+    advice.router,
+    live.router,
+):
     app.include_router(r, prefix="/api")
 
 
