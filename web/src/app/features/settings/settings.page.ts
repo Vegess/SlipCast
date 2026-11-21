@@ -11,17 +11,14 @@ interface AiStatus { provider: 'groq' | 'rules'; configured: boolean; model: str
   selector: 'app-settings',
   imports: [FormsModule],
   template: `
-  <div class="mx-auto max-w-3xl px-4 py-8 sm:px-8">
-    <h1 class="text-3xl font-bold">Settings</h1>
-    <p class="note mt-1">Your profile and how SlipCast behaves in this browser.</p>
-
-    <section class="card card-info mt-8">
+  <div>
+    <section class="card card-info">
       <h2 class="section-title">Profile</h2>
       <form class="mt-4 grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end" (ngSubmit)="saveName()">
         <label class="label">Name <input class="input" name="name" [(ngModel)]="name" maxlength="80" required></label>
         <button class="btn btn-primary" [disabled]="saving() || !name.trim() || name.trim() === auth.user()?.name">{{ saving() ? 'Saving…' : 'Save name' }}</button>
       </form>
-      <p class="note mt-3">Signed in as {{ auth.user()?.email }} · {{ auth.workspace()?.name }}</p>
+      <p class="note mt-3">Signed in as {{ auth.user()?.email }} · viewing {{ auth.workspace()?.name }}</p>
       @if (saved()) { <p class="mt-2 text-sm text-ok" role="status">Name saved.</p> }
       @if (error()) { <p class="mt-2 text-sm text-bad">{{ error() }}</p> }
     </section>

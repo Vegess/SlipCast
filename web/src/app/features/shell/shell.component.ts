@@ -14,12 +14,26 @@ import { NewProjectDialog } from './new-project.dialog';
   template: `
   <div class="flex h-full flex-col md:flex-row">
     <aside class="flex shrink-0 flex-col border-line bg-gradient-to-b from-panel to-panel-tint md:h-full md:w-64 md:border-r">
-      <p class="truncate px-5 pb-4 pt-5 text-xs font-medium text-muted">{{ auth.workspace()?.name }}</p>
-
-      <div class="grid grid-cols-2 gap-2 px-3">
-        <button class="btn px-2" (click)="dialog.set('import')">Import CSV</button>
-        <button class="btn px-2" (click)="loadDemo()" [disabled]="demoBusy()">{{ demoBusy() ? 'Loading…' : 'Demo data' }}</button>
+      <div class="px-3 pb-4 pt-4">
+        @if (auth.workspaces().length > 1) {
+          <label class="sr-only" for="workspace-picker">Workspace</label>
+          <select id="workspace-picker" class="input bg-canvas/60 py-1.5 text-xs font-medium" (change)="switchTo($any($event.target).value)">
+            @for (w of auth.workspaces(); track w.id) { <option [value]="w.id" [selected]="w.id === auth.workspace()?.id">{{ w.name }}</option> }
+          </select>
+        } @else {
+          <p class="truncate px-2 text-xs font-medium text-muted">{{ auth.workspace()?.name }}</p>
+        }
+        @if (!auth.canEdit()) {
+          <p class="anim-fade mt-2 rounded-lg bg-info/10 px-2.5 py-1.5 text-xs text-info-strong">View only. You can see everything here but not change it.</p>
+        }
       </div>
+
+      @if (auth.canEdit()) {
+        <div class="grid grid-cols-2 gap-2 px-3">
+          <button class="btn px-2" (click)="dialog.set('import')">Import CSV</button>
+          <button class="btn px-2" (click)="loadDemo()" [disabled]="demoBusy()">{{ demoBusy() ? 'Loading…' : 'Demo data' }}</button>
+        </div>
+      }
       @if (error()) { <p class="px-4 pt-2 text-xs text-bad">{{ error() }}</p> }
 
       <nav aria-label="Projects" class="mt-4 flex gap-1 overflow-x-auto px-3 pb-2 md:flex-1 md:flex-col md:overflow-y-auto">
@@ -32,8 +46,12 @@ import { NewProjectDialog } from './new-project.dialog';
             <span class="ml-auto hidden text-xs text-muted md:inline">{{ p.task_count - p.done_count }}</span>
           </a>
         }
-        <button class="flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted hover:bg-raised/60 hover:text-fg"
-                (click)="dialog.set('project')">+ New project</button>
+        @if (auth.canEdit()) {
+          <button class="flex shrink-0 items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted hover:bg-raised/60 hover:text-fg"
+                  (click)="dialog.set('project')">+ New project</button>
+        } @else if (!store.projects().length) {
+          <p class="px-2.5 py-2 text-sm text-muted">No projects here yet.</p>
+        }
       </nav>
 
       <div class="hidden space-y-3 border-t border-line px-5 py-4 md:block">
@@ -85,6 +103,12 @@ export class ShellComponent implements OnInit {
     } finally {
       this.demoBusy.set(false);
     }
+  }
+
+  /** Projects belong to one workspace, so switching goes back to the project list. */
+  switchTo(id: string) {
+    this.auth.selectWorkspace(id);
+    this.router.navigateByUrl('/projects');
   }
 
   async opened(p: Project) {

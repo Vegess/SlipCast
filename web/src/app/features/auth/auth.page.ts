@@ -3,11 +3,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Api, errorMessage } from '../../core/api.service';
 import { Project } from '../../core/models';
-import { AuthService } from '../../core/auth.service';
+import { AuthService, safeNext } from '../../core/auth.service';
+import { ProviderButtons, SIGN_IN_ERRORS } from '../../shared/provider-buttons.component';
 
 @Component({
   selector: 'app-auth-page',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ProviderButtons],
   template: `
   <div class="grid min-h-full lg:grid-cols-[1.25fr_1fr]">
     <section class="flex flex-col justify-between px-6 py-8 sm:px-12 lg:border-r lg:border-line lg:py-14">
@@ -40,7 +41,9 @@ import { AuthService } from '../../core/auth.service';
       <form class="anim-rise w-full max-w-sm" style="--i: 2" (ngSubmit)="submit()">
         <h2 class="text-2xl font-medium">{{ mode() === 'signin' ? 'Sign in' : 'Create your account' }}</h2>
         <p class="mt-1 text-sm text-muted">{{ mode() === 'signin' ? 'Welcome back.' : demo() ? 'Create a free account and we will load six months of demo tickets for you.' : 'You get a private workspace for your projects.' }}</p>
-        <div class="mt-6 grid gap-4">
+        @if (notice()) { <p class="mt-4 rounded-lg border border-info/40 bg-info/10 px-3 py-2 text-sm">{{ notice() }}</p> }
+        <div class="mt-6"><app-provider-buttons [next]="afterSignIn()" /></div>
+        <div class="grid gap-4">
           @if (mode() === 'register') {
             <label class="label">Name <input class="input" name="name" [(ngModel)]="name" required maxlength="80" autocomplete="name"></label>
           }
@@ -50,6 +53,7 @@ import { AuthService } from '../../core/auth.service';
                    [attr.minlength]="mode() === 'register' ? 8 : 1"
                    [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'">
             @if (mode() === 'register') { <span class="font-normal">At least 8 characters.</span> }
+            @else { <a routerLink="/forgot-password" class="self-end font-normal text-info hover:underline">Forgot password?</a> }
           </label>
           @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
           <button class="btn btn-primary w-full py-2.5" [disabled]="busy()">
@@ -58,9 +62,10 @@ import { AuthService } from '../../core/auth.service';
         </div>
         <p class="mt-6 text-sm text-muted">
           {{ mode() === 'signin' ? 'New to SlipCast?' : 'Already have an account?' }}
-          <button type="button" class="font-medium text-info hover:underline" (click)="toggle()">
+          <a [routerLink]="mode() === 'signin' ? '/signup' : '/login'" queryParamsHandling="preserve"
+             class="font-medium text-info hover:underline" (click)="error.set('')">
             {{ mode() === 'signin' ? 'Create an account' : 'Sign in' }}
-          </button>
+          </a>
         </p>
       </form>
     </section>
@@ -76,16 +81,28 @@ export class AuthPage implements OnInit {
   readonly mode = signal<'signin' | 'register'>('signin');
   readonly busy = signal(false);
   readonly error = signal('');
+  /** Why the visitor is here, e.g. "Sign in to join Alice's workspace", or why sign-in failed. */
+  readonly notice = signal('');
+  /** Where to go after signing in: a page they were sent from, or the demo. */
+  readonly next = signal<string | null>(null);
   name = ''; email = ''; password = '';
   readonly pins: [number, number, string][] = [[60, 182, 'stroke-ok'], [180, 150, 'stroke-ok'], [300, 112, 'stroke-info'], [360, 96, 'stroke-accent']];
 
   ngOnInit() {
-    const q = this.route.snapshot.queryParamMap;
+    const snap = this.route.snapshot;
+    const q = snap.queryParamMap;
     this.demo.set(q.get('demo') === '1');
-    if (q.get('mode') === 'register' || this.demo()) this.mode.set('register');
+    this.next.set(safeNext(q.get('next')));
+    if (snap.data['mode'] === 'register' || q.get('mode') === 'register' || this.demo()) this.mode.set('register');
+    const err = q.get('error');
+    if (err) this.error.set(SIGN_IN_ERRORS[err] ?? SIGN_IN_ERRORS['exchange_failed']);
+    else if (this.next()?.startsWith('/invite/')) this.notice.set('Sign in or create an account to accept your invite.');
   }
 
-  toggle() { this.mode.set(this.mode() === 'signin' ? 'register' : 'signin'); this.error.set(''); }
+  /** Google/GitHub sign-in lands here afterwards; the demo path opens a demo project. */
+  afterSignIn(): string | null {
+    return this.demo() ? '/dashboard?demo=1' : this.next();
+  }
 
   async submit() {
     this.busy.set(true);
@@ -98,7 +115,7 @@ export class AuthPage implements OnInit {
         const p = await this.api.post<Project>(`/workspaces/${ws}/demo-project`);
         await this.router.navigate(['/projects', p.id, 'board']);
       } else {
-        await this.router.navigateByUrl('/dashboard');
+        await this.router.navigateByUrl(this.next() ?? '/dashboard');
       }
     } catch (e) {
       this.error.set(errorMessage(e));

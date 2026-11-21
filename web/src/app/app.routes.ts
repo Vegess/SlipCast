@@ -5,6 +5,10 @@ import { authGuard, guestGuard, landingGuard } from './core/auth.guard';
 export const routes: Routes = [
   { path: 'login', canActivate: [guestGuard], title: 'Sign in · SlipCast',
     loadComponent: () => import('./features/auth/auth.page').then((m) => m.AuthPage) },
+  { path: 'signup', canActivate: [guestGuard], title: 'Create an account · SlipCast', data: { mode: 'register' },
+    loadComponent: () => import('./features/auth/auth.page').then((m) => m.AuthPage) },
+  { path: 'auth/callback', title: 'Signing in · SlipCast',
+    loadComponent: () => import('./features/account/oauth-callback.page').then((m) => m.OAuthCallbackPage) },
   {
     path: '',
     loadComponent: () => import('./features/layout/app-layout.component').then((m) => m.AppLayoutComponent),
@@ -13,6 +17,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage) },
       { path: 'about', title: 'How SlipCast works',
         loadComponent: () => import('./features/about/about.page').then((m) => m.AboutPage) },
+      { path: 'invite/:token', title: 'Workspace invite · SlipCast',
+        loadComponent: () => import('./features/account/invite.page').then((m) => m.InvitePage) },
+      { path: 'forgot-password', canActivate: [guestGuard], title: 'Forgot password · SlipCast',
+        loadComponent: () => import('./features/account/forgot-password.page').then((m) => m.ForgotPasswordPage) },
       {
         path: '',
         canActivate: [authGuard],
@@ -21,8 +29,18 @@ export const routes: Routes = [
             loadComponent: () => import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage) },
           { path: 'imports', title: 'Imports · SlipCast',
             loadComponent: () => import('./features/imports/imports.page').then((m) => m.ImportsPage) },
-          { path: 'settings', title: 'Settings · SlipCast',
-            loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage) },
+          {
+            path: 'settings',
+            loadComponent: () => import('./features/settings/settings.layout').then((m) => m.SettingsLayout),
+            children: [
+              { path: '', title: 'Settings · SlipCast',
+                loadComponent: () => import('./features/settings/settings.page').then((m) => m.SettingsPage) },
+              { path: 'account', title: 'Account · SlipCast',
+                loadComponent: () => import('./features/settings/account.view').then((m) => m.AccountSettings) },
+              { path: 'team', title: 'Team · SlipCast',
+                loadComponent: () => import('./features/settings/team.view').then((m) => m.TeamSettings) },
+            ],
+          },
           {
             path: 'projects',
             loadComponent: () => import('./features/shell/shell.component').then((m) => m.ShellComponent),
