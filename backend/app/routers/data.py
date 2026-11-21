@@ -1,15 +1,17 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_import_for_user, require_membership
 from app.models import ImportRecord, Project, Task, TaskEvent, User
-from app.routers.projects import _out, next_color
+from app.routers.projects import _counts, _out, next_color
 from app.services import analysis, demo_data, importer, ledger
 from app.timeutil import naive_utc, now_utc
 
 router = APIRouter(tags=["data"])
+
+DEMO_NAME = "Atlas Billing (demo)"
 
 
 def _save(db: Session, project: Project, rows: list[dict], events_of) -> None:
@@ -37,12 +39,23 @@ def _save(db: Session, project: Project, rows: list[dict], events_of) -> None:
 
 @router.post("/workspaces/{workspace_id}/demo-project", status_code=status.HTTP_201_CREATED)
 def create_demo_project(
-    workspace_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+    workspace_id: str,
+    response: Response,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ) -> dict:
     require_membership(db, user, workspace_id)
+    # One demo per workspace: a second click (or signing up from "Try the demo" and then
+    # clicking Demo data) returns the existing project instead of making a duplicate.
+    existing = db.scalar(
+        select(Project).where(Project.workspace_id == workspace_id, Project.name == DEMO_NAME).limit(1)
+    )
+    if existing is not None:
+        response.status_code = status.HTTP_200_OK
+        return _out(existing, _counts(db, [existing.id])).model_dump()
     project = Project(
         workspace_id=workspace_id,
-        name="Atlas Billing (demo)",
+        name=DEMO_NAME,
         goal="Six months of sample tickets from a SaaS billing team",
         color=next_color(db, workspace_id),
     )

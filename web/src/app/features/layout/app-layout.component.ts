@@ -13,7 +13,7 @@ import { AuthService } from '../../core/auth.service';
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
   <div class="flex h-full flex-col">
-    <header class="relative z-40 shrink-0 border-b border-line bg-panel/95 backdrop-blur">
+    <header class="site-header relative z-40 shrink-0 border-b border-line bg-panel/95 backdrop-blur">
       <div class="flex h-14 items-center gap-2 px-4 sm:px-6">
         <a [routerLink]="auth.user() ? '/dashboard' : '/'" class="mr-4 flex items-center gap-2.5">
           <img src="favicon.svg" alt="" width="26" height="26">

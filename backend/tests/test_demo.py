@@ -41,3 +41,13 @@ def test_demo_event_history_matches_status():
         assert t["events"][-1][1] == t["status"], t["title"]
         for prev, nxt in zip(t["events"], t["events"][1:], strict=False):
             assert nxt[0] == prev[1], t["title"]
+
+
+def test_demo_project_is_created_once_per_workspace(client, demo):
+    h, ws, pid = demo["headers"], demo["workspace_id"], demo["project_id"]
+    again = client.post(f"/api/workspaces/{ws}/demo-project", headers=h)
+    assert again.status_code == 200
+    assert again.json()["id"] == pid
+    assert again.json()["task_count"] > 400
+    names = [p["name"] for p in client.get(f"/api/workspaces/{ws}/projects", headers=h).json()]
+    assert names.count("Atlas Billing (demo)") == 1

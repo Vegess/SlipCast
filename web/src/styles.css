@@ -17,8 +17,8 @@
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-raised
-      px-3.5 py-2 text-sm font-medium text-fg transition-colors hover:border-muted/60
-      disabled:cursor-not-allowed disabled:opacity-50;
+      px-3.5 py-2 text-sm font-medium text-fg transition hover:border-muted/60 active:scale-[0.97]
+      disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
   }
   .btn-primary { @apply border-accent bg-accent font-semibold text-accent-ink hover:border-accent hover:brightness-95; }
   .btn-ghost { @apply border-transparent bg-transparent hover:border-transparent hover:bg-raised; }
@@ -41,6 +41,77 @@
   .card-accent { @apply border-t-2 border-t-accent/80; }   /* forecasts */
 }
 
+/* ---------------------------------------------------------------------------------------
+ * Motion. Short and purposeful: things arrive, charts draw themselves, the tab underline
+ * slides. Everything here switches off for people who ask their system for less motion.
+ * ------------------------------------------------------------------------------------- */
+@keyframes sc-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes sc-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sc-fade-out { to { opacity: 0; } }
+@keyframes sc-pop { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes sc-draw { to { stroke-dashoffset: 0; } }
+@keyframes sc-march { to { stroke-dashoffset: -24; } }
+@keyframes sc-ring { from { transform: scale(1); opacity: 0.7; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes sc-float { 0%, 100% { transform: translateY(0) rotate(-0.4deg); } 50% { transform: translateY(-8px) rotate(0.4deg); } }
+@keyframes sc-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  33% { transform: translate3d(3%, -4%, 0) scale(1.06); }
+  66% { transform: translate3d(-3%, 3%, 0) scale(0.97); }
+}
+@keyframes sc-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@layer utilities {
+  /* Staggered entrances: set --i (0, 1, 2…) on siblings to delay each a little more. */
+  .anim-rise { animation: sc-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+  .anim-fade { animation: sc-fade 0.45s ease-out backwards; animation-delay: calc(var(--i, 0) * 45ms); }
+  .anim-pop { animation: sc-pop 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .anim-float { animation: sc-float 7s ease-in-out infinite; }
+  .anim-drift { animation: sc-drift 16s ease-in-out infinite; }
+
+  /* Scroll reveal, driven by RevealDirective adding .is-visible. */
+  .reveal {
+    opacity: 0; transform: translateY(28px);
+    transition: opacity 0.8s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+    transition-delay: calc(var(--i, 0) * 110ms);
+  }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  /* Cards that can be picked up lift slightly under the pointer. */
+  .lift { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 12px 24px -14px rgb(0 0 0 / 0.55); }
+
+  /* Loading placeholder with a soft sweep. */
+  .skeleton {
+    @apply rounded-lg;
+    background: linear-gradient(90deg, rgb(var(--c-raised)) 25%, rgb(var(--c-line)) 50%, rgb(var(--c-raised)) 75%);
+    background-size: 200% 100%;
+    animation: sc-shimmer 1.6s linear infinite;
+  }
+
+  /* SVG helpers for the sign-in illustration. */
+  .draw-line { stroke-dasharray: 600; stroke-dashoffset: 600; animation: sc-draw 1.6s cubic-bezier(0.6, 0, 0.3, 1) 0.2s forwards; }
+  .march { animation: sc-march 1.2s linear infinite; }
+  .ring-pulse { transform-box: fill-box; transform-origin: center; animation: sc-ring 2.2s ease-out infinite; }
+}
+
+/* Project tabs: the active underline is one element that slides between tabs on navigation. */
+.tab-link { position: relative; }
+.tab-link.tab-active::after {
+  content: ""; position: absolute; left: 0.75rem; right: 0.75rem; bottom: -2px; height: 2px;
+  border-radius: 2px; background: rgb(var(--c-accent));
+  view-transition-name: tab-indicator;
+}
+
+/* Page changes use the browser's View Transitions: the old page fades, the new one rises.
+ * The top bar keeps still. Browsers without the API just switch pages as before. */
+.site-header { view-transition-name: site-header; }
+::view-transition-old(root) { animation: sc-fade-out 0.16s ease-in both; }
+::view-transition-new(root) { animation: sc-rise 0.32s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+::view-transition-group(tab-indicator) { animation-duration: 0.35s; animation-timing-function: cubic-bezier(0.3, 0.7, 0.2, 1); }
+
 @media (prefers-reduced-motion: reduce) {
-  * { transition: none !important; animation: none !important; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  .reveal { opacity: 1; transform: none; }
+  .draw-line { stroke-dashoffset: 0; }
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

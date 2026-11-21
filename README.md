@@ -9,8 +9,9 @@ SlipCast is delivery analytics for software teams. Import ticket history from Ji
 Issues, Trello or Linear (CSV, no plugin), and it answers two questions:
 **"When will this really be done?"** and **"Which tickets are going to slip, and why?"**
 
-**Live demo:** _not deployed yet (see [docs/DEPLOY.md](docs/DEPLOY.md))._ Sign up, click
-**Demo data**, and every screen below fills with six months of realistic tickets.
+**Live demo:** <https://slip-cast.vercel.app>. Click **Try the demo**, sign up, and every
+screen below fills with six months of realistic tickets. The API runs on a free instance
+that sleeps when idle, so the first load can take up to a minute.
 
 ![Write-time ticket check](docs/screenshots/ticket-check.png)
 
@@ -223,11 +224,36 @@ cd web && npm install && npm start                      # http://localhost:4200
 
 Sign up, then click **Demo data** in the sidebar, or **Import CSV** with your own export.
 
+### Option 3: Without Docker on Windows (Command Prompt)
+
+Use `python -m` for every tool, so the virtual environment is always the one that runs.
+
+```bat
+cd backend
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install -r requirements-dev.txt
+python -m alembic upgrade head
+python -m uvicorn app.main:app --reload
+```
+
+In a second Command Prompt:
+
+```bat
+cd web
+npm install
+npm start
+```
+
+The API is at http://localhost:8000 and the web app at http://localhost:4200. If you move
+the repository folder, delete `backend\.venv` and create it again: Windows virtual
+environments store absolute paths.
+
 ## Tests
 
 ```bash
 cd backend
-pytest                                   # 82 tests
+pytest                                   # 83 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```

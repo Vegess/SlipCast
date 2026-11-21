@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { CountUpDirective, RevealDirective } from '../../shared/motion';
 
 interface Feature { imgCls?: string; kicker: string; title: string; body: string; points: string[]; img: string; alt: string; edge: string; kickerCls: string; }
 
@@ -26,43 +27,45 @@ const FEATURES: Feature[] = [
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink],
+  imports: [RouterLink, RevealDirective, CountUpDirective],
   template: `
   <div class="overflow-x-hidden">
     <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:pt-20">
       <div>
-        <p class="pill bg-accent/15 text-accent-strong">Delivery analytics for software teams</p>
-        <h1 class="mt-5 text-4xl font-bold leading-[1.05] sm:text-6xl">Other tools tell you a project is late.</h1>
-        <p class="mt-5 text-lg text-fg/90 sm:text-xl">
+        <p class="anim-rise pill gap-2 bg-accent/15 text-accent-strong">
+          <span class="relative flex h-2 w-2" aria-hidden="true"><span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60"></span><span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span></span>
+          Delivery analytics for software teams</p>
+        <h1 class="anim-rise mt-5 text-4xl font-bold leading-[1.05] sm:text-6xl" style="--i: 1">Other tools tell you a project is late.</h1>
+        <p class="anim-rise mt-5 text-lg text-fg/90 sm:text-xl" style="--i: 3">
           SlipCast tells you a <span class="text-accent">ticket</span> will be late while you're still writing it,
           and proves how often it's right.
         </p>
-        <p class="mt-4 max-w-lg text-muted">Import ticket history from Jira, GitHub Issues, Trello or Linear as a CSV. No plugin, and a privacy mode that never sends ticket text to an AI.</p>
-        <div class="mt-8 flex flex-wrap gap-3">
+        <p class="anim-rise mt-4 max-w-lg text-muted" style="--i: 4">Import ticket history from Jira, GitHub Issues, Trello or Linear as a CSV. No plugin, and a privacy mode that never sends ticket text to an AI.</p>
+        <div class="anim-rise mt-8 flex flex-wrap gap-3" style="--i: 5">
           <a routerLink="/login" [queryParams]="{ demo: 1 }" class="btn btn-primary px-5 py-2.5 text-base">Try the demo</a>
           <a routerLink="/login" class="btn px-5 py-2.5 text-base">Sign in</a>
           <a routerLink="/about" class="btn btn-ghost px-4 py-2.5 text-base text-muted">How it works →</a>
         </div>
-        <p class="mt-4 text-xs text-muted">The demo loads six months of tickets from a SaaS billing team. Free, no card.</p>
+        <p class="anim-fade mt-4 text-xs text-muted" style="--i: 8">The demo loads six months of tickets from a SaaS billing team. Free, no card.</p>
       </div>
-      <figure class="relative">
-        <div class="absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-info/25 via-violet/15 to-accent/20 blur-2xl" aria-hidden="true"></div>
-        <img src="landing/delivery.webp" width="1200" height="750" class="w-full rounded-xl border border-line shadow-2xl"
+      <figure class="anim-pop relative" style="animation-delay: 0.25s; animation-duration: 0.8s">
+        <div class="anim-drift absolute -inset-6 -z-10 rounded-[2rem] bg-gradient-to-br from-info/25 via-violet/15 to-accent/20 blur-2xl" aria-hidden="true"></div>
+        <img src="landing/delivery.webp" width="1200" height="750" class="anim-float w-full rounded-xl border border-line shadow-2xl"
              alt="SlipCast Delivery tab with cycle time, throughput and forecast numbers">
       </figure>
     </section>
 
     <section class="border-y border-line bg-panel/60">
       <div class="mx-auto grid max-w-6xl gap-6 px-4 py-8 text-center sm:grid-cols-3 sm:px-8">
-        <div><p class="font-display text-3xl text-ok">92%</p><p class="note">ticket types predicted correctly (vs 37% baseline)</p></div>
-        <div><p class="font-display text-3xl text-info">83%</p><p class="note">of real durations inside the "took X–Y days" range</p></div>
-        <div><p class="font-display text-3xl text-accent">83%</p><p class="note">of forecasts within their 85% estimate, on the demo's replayed history</p></div>
+        <div appReveal="0"><p class="font-display text-3xl text-ok tabular-nums" [appCountUp]="92" suffix="%">92%</p><p class="note">ticket types predicted correctly (vs 37% baseline)</p></div>
+        <div appReveal="1"><p class="font-display text-3xl text-info tabular-nums" [appCountUp]="83" suffix="%">83%</p><p class="note">of real durations inside the "took X–Y days" range</p></div>
+        <div appReveal="2"><p class="font-display text-3xl text-accent tabular-nums" [appCountUp]="83" suffix="%">83%</p><p class="note">of forecasts within their 85% estimate, on the demo's replayed history</p></div>
       </div>
     </section>
 
     @for (f of features; track f.kicker; let i = $index) {
       <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-8 lg:grid-cols-2">
-        <div [class.lg:order-2]="i % 2 === 1">
+        <div appReveal [class.lg:order-2]="i % 2 === 1">
           <p class="text-sm font-semibold uppercase tracking-wide" [class]="f.kickerCls">{{ f.kicker }}</p>
           <h2 class="mt-3 text-3xl font-bold leading-tight">{{ f.title }}</h2>
           <p class="mt-4 text-muted">{{ f.body }}</p>
@@ -70,12 +73,12 @@ const FEATURES: Feature[] = [
             @for (p of f.points; track p) { <li class="flex gap-2.5"><span class="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-current" [class]="f.kickerCls" aria-hidden="true"></span>{{ p }}</li> }
           </ul>
         </div>
-        <img [src]="f.img" [alt]="f.alt" loading="lazy" class="w-full rounded-xl border border-line border-t-2 shadow-xl" [class]="f.edge + ' ' + (f.imgCls ?? '')">
+        <div appReveal="1"><img [src]="f.img" [alt]="f.alt" loading="lazy" class="lift w-full rounded-xl border border-line border-t-2 shadow-xl" [class]="f.edge + ' ' + (f.imgCls ?? '')"></div>
       </section>
     }
 
     <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-8">
-      <div class="card card-accent flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center">
+      <div appReveal class="card card-accent flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center">
         <div class="mr-auto">
           <h2 class="text-2xl font-bold">See your next slip before it happens.</h2>
           <p class="note mt-1">Every model is tested on tickets it never saw and compared with a simple baseline. Read how each one works.</p>

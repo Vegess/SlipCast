@@ -17,7 +17,7 @@ interface Health {
   imports: [FormsModule, TaskDialog, KindChip],
   template: `
   @if (health(); as h) {
-    <section class="mb-5 flex flex-wrap items-start gap-x-8 gap-y-3 rounded-xl border border-line border-t-2 border-t-info/80 bg-panel px-5 py-4">
+    <section class="anim-rise mb-5 flex flex-wrap items-start gap-x-8 gap-y-3 rounded-xl border border-line border-t-2 border-t-info/80 bg-panel px-5 py-4">
       <div>
         <p class="text-xs text-muted">Project health</p>
         <p class="font-display text-2xl font-medium" [class.text-ok]="h.health === 'on_track'"
@@ -46,9 +46,10 @@ interface Health {
         <div class="flex min-h-[140px] flex-1 flex-col gap-2 rounded-xl bg-canvas/60 p-2 ring-1"
              [class.ring-info]="over() === s.id" [class.ring-line]="over() !== s.id"
              (dragover)="$event.preventDefault(); over.set(s.id)" (dragleave)="over.set(null)" (drop)="drop($event, s.id)">
-          @for (t of columns()[s.id].items; track t.id) {
+          @for (t of columns()[s.id].items; track t.id; let i = $index) {
             <button draggable="true" (dragstart)="$event.dataTransfer?.setData('text/plain', t.id)" (click)="open(t)"
-                    class="block w-full rounded-lg border border-line border-l-[3px] bg-panel px-3 py-2.5 text-left hover:border-muted/60"
+                    [style.--i]="i < 10 ? i : 10"
+                    class="anim-rise lift block w-full rounded-lg border border-line border-l-[3px] bg-panel px-3 py-2.5 text-left hover:border-muted/60"
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
               <span class="block text-sm font-medium leading-snug">{{ t.title }}</span>
               <span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
