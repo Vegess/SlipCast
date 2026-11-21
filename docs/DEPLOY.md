@@ -197,6 +197,13 @@ On Render set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`,
 slash). The API works out its own callback URL from the request; set `PUBLIC_API_URL` only if
 it sits behind an unusual proxy.
 
+## Live updates
+
+Live screens use Server-Sent Events from the API, held in memory by the one API process, so
+run a single instance (the default on Render). Each connection closes after 5 minutes by
+design and the page reconnects on its own. Nothing else needs configuring; to send events,
+create a key on a project's **Live feed** tab.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -207,5 +214,7 @@ it sits behind an unusual proxy.
 | API crashes with `unable to open database file` | `DATABASE_URL` is not set, so it fell back to SQLite. Set it to the Neon string. |
 | Google says `redirect_uri_mismatch` | The callback URL registered with Google must match `https://<your API>/api/auth/google/callback` exactly. |
 | Sign-in returns to the login page with "took too long" | The sign-in was started more than 10 minutes earlier, or in a different browser. Try again. |
+| The project header says "Connecting…" | The API is asleep or unreachable, or `CORS_ORIGINS` doesn't include the site. The page keeps retrying. |
+| Events return 401 | The key was revoked, belongs to another project, or isn't in the `X-SlipCast-Key` header. |
 | Neon connection errors | Keep `?sslmode=require` on the URL; check the Neon project is not suspended. |
 | Advice always says "Rule-based" | Expected without `GROQ_API_KEY`. With a key, check the API logs for `LLM call failed`. |

@@ -56,6 +56,12 @@ pages share a top navigation bar that collapses to a menu on mobile; every page 
 |---|---|---|
 | ![Landing page](docs/screenshots/landing.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Imports](docs/screenshots/imports.png) |
 
+### Live updates and alerts
+Other systems can send stage changes to a project through the event API with a project key.
+Every open screen refreshes within about a second, changed cards glow, and a bell and toasts
+say when the 85% finish date moves by two days or more or new work looks likely to slip.
+The **Live feed** tab shows how it flows, with copy-paste examples.
+
 ### Write-time ticket check
 As a ticket is typed, a side panel scores how ready it is (0–100, with reasons), shows how long
 similar finished tickets took against the plan, predicts the chance of missing the due date
@@ -254,7 +260,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 101 tests
+pytest                                   # 114 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -269,6 +275,10 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | GET | `/auth/providers`, `/auth/{google,github}/start`, `/auth/{google,github}/callback` | Sign in with Google or GitHub (state + PKCE) |
 | POST | `/auth/password`, `/auth/logout-all` | Set or change password; sign out on every device |
 | GET, PATCH, DELETE | `/workspaces/{id}/members[/{user_id}]` | Team members and roles (admin, member, viewer) |
+| POST | `/projects/{id}/events` (header `X-SlipCast-Key`) | Stage changes from another system; idempotent, 600 events/min per key |
+| GET, POST, DELETE | `/projects/{id}/api-keys[/{id}]`; GET `/projects/{id}/stages` | Per-project API keys (admins) and stages |
+| POST | `/projects/{id}/stream-token`; GET `/projects/{id}/stream` | Live updates over Server-Sent Events |
+| GET | `/projects/{id}/alerts`, `/workspaces/{id}/alerts` | Forecast moves and risky new work |
 | GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |

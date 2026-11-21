@@ -346,7 +346,7 @@ Approved new dependency: `httpx==0.28.1` (server-side OAuth token exchange). No 
 - Acceptance: a new user can sign in with Google or GitHub on the live site; an
   invited viewer sees the board but gets 403 on any write; all old accounts still work.
 
-### 4.2 Promises and the real-time engine (v1.3)
+### 4.2 Promises and the real-time engine (v1.3, done)
 - UI copy: Build keeps "ticket"; Ship says "order"; Serve says "job"; screens that mix
   modules say "promise". Keep the `tasks` table and the `app` package names.
 - New columns on `projects`: `template` (`software`, `shipments`, `services`; default
