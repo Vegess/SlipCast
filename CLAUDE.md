@@ -316,7 +316,7 @@ the engine per module.
 
 Do the tasks in order. Ship each as its own minor version with a CHANGELOG entry.
 
-### 4.0 Release v1.1.0 first
+### 4.0 Release v1.1.0 first (done)
 - (Prepared in PR #2.) CHANGELOG `Unreleased` becomes `[1.1.0] - 2026-11-18`; version `1.1.0` in
   `backend/app/main.py` and `web/package.json`; README "Live demo" line points at the
   Vercel URL with a note that the first load can take up to a minute.
@@ -325,7 +325,7 @@ Do the tasks in order. Ship each as its own minor version with a CHANGELOG entry
 - Fix: clicking **Demo data** twice must not create a second demo project.
 - Acceptance: tag `v1.1.0` exists; CI green.
 
-### 4.1 Accounts and teams (v1.2)
+### 4.1 Accounts and teams (v1.2, done)
 Approved new dependency: `httpx==0.28.1` (server-side OAuth token exchange). No auth SaaS.
 
 - **Sign in with Google and GitHub** (OAuth 2.0 authorization-code flow with `state`

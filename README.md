@@ -47,8 +47,9 @@ a foundation and competes on four things:
 ### Pages
 A public **landing page** with the pitch and a one-click demo, a **dashboard** with a card per
 project (health, open tickets, 85% forecast date, high-risk count), **Imports** with every past
-CSV import and its data-quality report, **Settings** (name, privacy mode, theme, AI provider
-status), a plain-language **About** page explaining each method, and a friendly 404. Signed-in
+CSV import and its data-quality report, **Settings** with General (name, privacy mode, theme, AI
+provider status), Account (Google/GitHub sign-in, password, sign out everywhere) and **Team**
+(members, admin/member/viewer roles, invite links), a plain-language **About** page explaining each method, and a friendly 404. Signed-in
 pages share a top navigation bar that collapses to a menu on mobile; every page is lazy-loaded.
 
 | Landing page | Dashboard | Imports |
@@ -253,7 +254,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 83 tests
+pytest                                   # 101 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -265,6 +266,10 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | Method | Path | Purpose |
 |---|---|---|
 | POST | `/auth/register`, `/auth/login`; GET, PATCH `/auth/me` | Accounts, personal workspaces, display name |
+| GET | `/auth/providers`, `/auth/{google,github}/start`, `/auth/{google,github}/callback` | Sign in with Google or GitHub (state + PKCE) |
+| POST | `/auth/password`, `/auth/logout-all` | Set or change password; sign out on every device |
+| GET, PATCH, DELETE | `/workspaces/{id}/members[/{user_id}]` | Team members and roles (admin, member, viewer) |
+| GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |
 | POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project` | CSV import with quality report; demo project |

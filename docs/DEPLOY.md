@@ -41,6 +41,9 @@ upgraded automatically. `GROQ_API_KEY` is optional; without it, advice is rule-b
    - `DATABASE_URL`: the Neon string from step 1.
    - `CORS_ORIGINS`: leave as `http://localhost:4200` for now; you'll set it after step 3.
    - `GROQ_API_KEY`: optional. Create one at <https://console.groq.com/keys>, or leave empty.
+   - Sign in with Google / GitHub (optional): `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`,
+     `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `PUBLIC_WEB_URL` (your Vercel URL). See
+     "Sign in with Google and GitHub" below for where to get them.
    `JWT_SECRET` is generated automatically; `ENVIRONMENT=production` and
    `AUTO_CREATE_TABLES=false` are already set.
 4. Click **Apply**. The first build takes 5–10 minutes (it installs pandas and scikit-learn).
@@ -172,6 +175,28 @@ Open the web URL, sign up, load the demo data and check every tab.
 - **Tag each release** (`git tag -a v1.1.0 -m "SlipCast 1.1.0"` and push the tag), then create
   a GitHub Release from the tag and paste that version's section of `CHANGELOG.md`.
 
+## Sign in with Google and GitHub (optional)
+
+Each button appears only when both of its keys are set on the API. Register these callback
+URLs with the provider (add the `localhost` one too if you want to test locally):
+
+- Google: `https://<your API>/api/auth/google/callback`
+- GitHub: `https://<your API>/api/auth/github/callback`
+
+**GitHub:** Settings → Developer settings → OAuth Apps → New OAuth App. Homepage URL is your
+Vercel URL. Copy the Client ID and generate a client secret.
+
+**Google:** in Google Cloud Console create a project, open **Google Auth Platform**, set up the
+consent screen (External), then **Clients → Create client → Web application** with the
+callback URLs above as *Authorized redirect URIs* (no JavaScript origins needed). Copy the
+Client ID and secret. While the app is in *Testing*, add yourself under **Audience → Test
+users**; publish it when sign-in works.
+
+On Render set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`,
+`GITHUB_CLIENT_SECRET` and `PUBLIC_WEB_URL` (e.g. `https://slip-cast.vercel.app`, no trailing
+slash). The API works out its own callback URL from the request; set `PUBLIC_API_URL` only if
+it sits behind an unusual proxy.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -180,5 +205,7 @@ Open the web URL, sign up, load the demo data and check every tab.
 | Browser console shows a CORS error | `CORS_ORIGINS` must exactly match the web origin (scheme and host, no trailing slash). |
 | API crashes with `JWT_SECRET must be set in production` | Set `JWT_SECRET` (Render generates it from `render.yaml`; on Cloud Run use the secret above). |
 | API crashes with `unable to open database file` | `DATABASE_URL` is not set, so it fell back to SQLite. Set it to the Neon string. |
+| Google says `redirect_uri_mismatch` | The callback URL registered with Google must match `https://<your API>/api/auth/google/callback` exactly. |
+| Sign-in returns to the login page with "took too long" | The sign-in was started more than 10 minutes earlier, or in a different browser. Try again. |
 | Neon connection errors | Keep `?sslmode=require` on the URL; check the Neon project is not suspended. |
 | Advice always says "Rule-based" | Expected without `GROQ_API_KEY`. With a key, check the API logs for `LLM call failed`. |
