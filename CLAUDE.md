@@ -278,6 +278,133 @@ and are never installed in the API image.
 
 ---
 
+## 4b. Phase 4: Every promise, forecast and scored (approved by the owner, 2026-11-18; reframed 2026-11-20)
+
+**Status:** Phases 1–3 are done and live (web `https://slip-cast.vercel.app`, API
+`https://slipcast-api.onrender.com`, Neon Postgres in Singapore). This phase widens the
+product. It is an approved change of direction, so do not stop to ask about it, but still
+ask before anything listed in section 3 (paid services, unlisted dependencies).
+
+**New pitch (replaces the pitch in section 1 from Phase 4 on):**
+**"Every promise your business makes, forecast and scored."**
+Every business makes delivery promises: a feature ships Friday (software), an order
+arrives Tuesday (goods), a technician comes Thursday at 2 pm (services). SlipCast treats
+each as a **promise** with stages, a promised date and a real finish, predicts which
+promises will be broken and why while there is still time to act, and keeps a scored
+record of how often it was right.
+
+**Market position.** Software delivery forecasting already exists (Cadence, Nave,
+ActionableAgile, LinearB, Jellyfish, Swarmia), and so does shipment ETA prediction
+(project44, FourKites). None of them covers software, goods and services in one place,
+and none shows its own track record per promise. Target customer: a growing company
+that does more than one of the three, e.g. a D2C brand with its own app, warehouse
+orders and installation visits. We do **not** compete with project44 on live GPS, weather
+or traffic models; our edge is reference classes ("orders like this on this route took
+3–6 days"), write-time checks and the ledger.
+
+**The rule that keeps this one product:** one engine, three modules. Every promise is a
+row in `tasks` with stages, a start, a promised date (`due`) and a finish. Forecasting,
+reference classes, slip risk, alerts and the forecast ledger are shared. A module only
+adds wording, stages, a few fields, a demo dataset and its own breakdowns. Never fork
+the engine per module.
+
+| Module | `template` value | Promises | Closest existing tools |
+|---|---|---|---|
+| **Build** | `software` | tickets, pull requests, releases | Cadence, Nave, LinearB |
+| **Ship** | `shipments` | customer orders and shipments | project44, FourKites |
+| **Serve** | `services` | service jobs and appointments | none found |
+
+Do the tasks in order. Ship each as its own minor version with a CHANGELOG entry.
+
+### 4.0 Release v1.1.0 first
+- (Prepared in PR #2.) CHANGELOG `Unreleased` becomes `[1.1.0] - 2026-11-18`; version `1.1.0` in
+  `backend/app/main.py` and `web/package.json`; README "Live demo" line points at the
+  Vercel URL with a note that the first load can take up to a minute.
+- `docs/DEPLOY.md`: note `region` and `plan: free` in `render.yaml`, and that
+  `CORS_ORIGINS` must have no trailing slash.
+- Fix: clicking **Demo data** twice must not create a second demo project.
+- Acceptance: tag `v1.1.0` exists; CI green.
+
+### 4.1 Accounts and teams (v1.2)
+Approved new dependency: `httpx==0.28.1` (server-side OAuth token exchange). No auth SaaS.
+
+- **Sign in with Google and GitHub** (OAuth 2.0 authorization-code flow with `state`
+  and PKCE). New table `oauth_accounts` (user_id, provider, provider_user_id, email,
+  created_at; unique on provider + provider_user_id). `users.password_hash` becomes
+  nullable via a new migration. Matching email on an existing account links it only
+  when the provider says the email is verified.
+- Config: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GITHUB_CLIENT_ID`,
+  `GITHUB_CLIENT_SECRET`, `PUBLIC_WEB_URL`. Buttons are hidden when a provider isn't
+  configured, so local runs and CI work without keys.
+- **Teams:** invite by link (token, expires in 7 days, single use) to a workspace with
+  role `admin`, `member` or `viewer`. Viewers can read everything and change nothing.
+  Enforce roles in `deps.py`, not in routers. Isolation tests cover each role.
+- **Auth pages (each its own lazy route):** sign in, create account, accept invite,
+  OAuth callback, forgot password (shows "ask your workspace admin" until an email
+  service is approved), and Settings → Account (connected sign-in methods, change
+  password, sign out everywhere) and Settings → Team (members, roles, invite links).
+- Acceptance: a new user can sign in with Google or GitHub on the live site; an
+  invited viewer sees the board but gets 403 on any write; all old accounts still work.
+
+### 4.2 Promises and the real-time engine (v1.3)
+- UI copy: Build keeps "ticket"; Ship says "order"; Serve says "job"; screens that mix
+  modules say "promise". Keep the `tasks` table and the `app` package names.
+- New columns on `projects`: `template` (`software`, `shipments`, `services`; default
+  `software`; later `project_work`, `inventory`, `product_launch`). New table `workflow_stages`
+  (project_id, key, label, order, category `todo|doing|blocked|done`). The engine maps
+  every stage to a category, so flow, forecast and risk code does not change.
+- New column `tasks.item_type` and a JSON column `tasks.attributes` for template fields.
+- **Event ingestion:** `POST /api/projects/{id}/events` with a per-project API key
+  (table `project_api_keys`, store only a hash, shown once). Body: external_id, stage,
+  occurred_at, optional fields. Idempotent on (external_id, stage, occurred_at). Creates
+  the item if it doesn't exist. Rate limit 600 per minute per key.
+- **Live screens:** `GET /api/projects/{id}/stream` as Server-Sent Events (auth by a
+  short-lived stream token in the query string). The board, Delivery and Forecast tabs
+  update without reload. The analysis cache invalidates on each event.
+- **Alerts:** when the P85 date moves by 2 or more days, or a new item scores high
+  risk, record an alert and show it in a bell menu. Outbound webhooks (Slack-compatible
+  JSON) per project are optional.
+- Acceptance: posting 50 events with `curl` updates an open browser within 2 seconds
+  and the forecast date moves; duplicate events change nothing.
+
+### 4.3 Modules (one minor version each, in this order)
+Each module ships with: stages, fields, a deterministic demo dataset of 300 to 500
+promises, wording, its breakdowns, and a "small data" test. Show the module picker in
+the new-project dialog, with one sentence explaining each.
+
+1. **Build (v1.4):** pull requests and releases from GitHub via a repository webhook
+   (signature verified with the webhook secret). PR stages: opened, in review, approved,
+   merged. Release stages: tagged, deployed. Adds review wait time, PR-size reference
+   classes, and the four DORA metrics on the Delivery tab.
+2. **Ship (v1.5):** stages Ordered, Packed, Dispatched, In transit, Out for delivery,
+   Delivered, plus Exception. Fields origin, destination, carrier, promised date, weight,
+   order value. Late-delivery risk by route and carrier; reference class "orders like
+   this on this route took 3 to 6 days"; on-time rate by carrier and route. Starts on a
+   realistic **simulated** demo dataset and the event API. **A courier tracking API is a
+   third-party service: ask the owner before adding one.** Stage updates only: no live
+   GPS, maps or driver app.
+3. **Serve (v1.6):** service jobs. Stages Booked, Scheduled, Assigned, En route, On site,
+   Done, plus Rescheduled and Cancelled. Fields service type, location area, technician,
+   appointment window, duration estimate. Predicts the risk of a missed or rescheduled
+   visit and the real job duration ("jobs like this took 1.5–3 hours"); breakdowns by
+   technician, area and service type; technician load like owner load in Build.
+4. **Control Room (v1.7):** one animated, live page across all of a workspace's projects:
+   every promise due in the next 7 days, at-risk ones first, a live event feed, forecast
+   slips as toasts, and the ledger's hit rate per module. Uses the motion system from
+   v1.1.0 (`shared/motion.ts`, `styles.css`) and adds a third theme, **Neon** (teal and
+   violet accents on near-black), next to Dusk and Light.
+
+**Later (not before the four above ship):** Project work (client deliverables),
+Inventory (stockout-date forecasts) and Product launch (stage-gate milestones), as
+described in the 2026-11-18 version of this section in git history.
+
+### 4.4 Out of scope for Phase 4
+Live GPS tracking and maps, weather or traffic models, driver, courier or technician
+apps, payments and billing, payroll, chat, time tracking, and a full sprint board. Each
+is a separate product with large competitors.
+
+---
+
 ## 5. Definition of done (every task)
 
 - Lint, migrations check, tests and web build all pass locally and in CI.
