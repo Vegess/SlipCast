@@ -115,6 +115,10 @@ class Project(Base):
     name: Mapped[str] = mapped_column(String(80))
     goal: Mapped[str] = mapped_column(String(300), default="")
     color: Mapped[str] = mapped_column(String(9), default="#7D96F2")
+    # Which module the project belongs to: software (Build), shipments (Ship), services (Serve).
+    template: Mapped[str] = mapped_column(String(20), default="software", server_default="software")
+    # Last 85% completion date seen by the alert check, so a slip of 2+ days can be noticed.
+    last_p85: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -140,7 +144,11 @@ class Task(Base):
     kind_source: Mapped[str] = mapped_column(String(10), default="")
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    external_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # The project's own stage (e.g. "in_transit"); `status` is its category, which the engine uses.
+    stage: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    item_type: Mapped[str] = mapped_column(String(20), default="", server_default="")
+    attributes: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     position: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -248,3 +256,61 @@ class ImportRecord(Base):
     skipped: Mapped[int] = mapped_column(Integer, default=0)
     report: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class WorkflowStage(Base):
+    """A project's own stage, mapped to one of the four categories the engine understands."""
+
+    __tablename__ = "workflow_stages"
+    __table_args__ = (UniqueConstraint("project_id", "key", name="uq_stage_key"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    key: Mapped[str] = mapped_column(String(40))
+    label: Mapped[str] = mapped_column(String(60))
+    order: Mapped[int] = mapped_column(Integer, default=0)
+    category: Mapped[str] = mapped_column(String(10))  # todo | doing | blocked | done
+
+
+class ProjectApiKey(Base):
+    """Lets another system post events to one project. Only a hash of the key is stored."""
+
+    __tablename__ = "project_api_keys"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(60))
+    prefix: Mapped[str] = mapped_column(String(16))  # shown in lists so people can tell keys apart
+    key_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IngestedEvent(Base):
+    """One row per accepted event, so sending the same event twice changes nothing."""
+
+    __tablename__ = "ingested_events"
+    __table_args__ = (UniqueConstraint("project_id", "external_id", "stage", "occurred_at", name="uq_ingested_event"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    external_id: Mapped[str] = mapped_column(String(64))
+    stage: Mapped[str] = mapped_column(String(40))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Alert(Base):
+    """Something worth a person's attention: a forecast slipped, or a new item looks risky."""
+
+    __tablename__ = "alerts"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(30))  # forecast_slip | forecast_gain | high_risk
+    severity: Mapped[str] = mapped_column(String(10), default="warning")  # info | warning | critical
+    message: Mapped[str] = mapped_column(String(300))
+    data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)

@@ -148,6 +148,9 @@ class TaskOut(BaseModel):
     description: str
     kind: str | None
     kind_source: str
+    stage: str | None = None
+    item_type: str = ""
+    attributes: dict | None = None
     started_at: datetime | None
     completed_at: datetime | None
     position: int

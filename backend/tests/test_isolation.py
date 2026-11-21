@@ -69,6 +69,16 @@ def test_cross_tenant_access_is_denied(client, make_user):
     bob_invite = client.post(
         f"/api/workspaces/{bob['workspace_id']}/invites", json={"role": "viewer"}, headers=bh
     ).json()
+    # real-time endpoints
+    pid = p["id"]
+    assert client.get(f"/api/projects/{pid}/stages", headers=bh).status_code == 404
+    assert client.post(f"/api/projects/{pid}/api-keys", json={"name": "x"}, headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{pid}/api-keys", headers=bh).status_code == 404
+    alice_key = client.post(f"/api/projects/{pid}/api-keys", json={"name": "x"}, headers=alice["headers"]).json()
+    assert client.delete(f"/api/projects/{pid}/api-keys/{alice_key['id']}", headers=bh).status_code == 404
+    assert client.post(f"/api/projects/{pid}/stream-token", headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{pid}/alerts", headers=bh).status_code == 404
+    assert client.get(f"/api/workspaces/{ws}/alerts", headers=bh).status_code == 404
     # an invite id from Bob's workspace can't be used to delete through Alice's, or vice versa
     assert (
         client.delete(f"/api/workspaces/{ws}/invites/{bob_invite['id']}", headers=alice["headers"]).status_code == 404

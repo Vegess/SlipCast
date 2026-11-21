@@ -8,6 +8,7 @@ from app.models import Task, TaskEvent, User
 from app.schemas import TaskIn, TaskOut, TaskUpdate
 from app.services import ledger
 from app.services.analysis import get_analysis
+from app.services.live import broker
 from app.timeutil import now_utc
 
 router = APIRouter(tags=["tasks"])
@@ -20,12 +21,14 @@ def record_start(task: Task, old_status: str | None, db: Session) -> None:
             db.commit()
 
 
-def apply_status(task: Task, new_status: str, db: Session) -> None:
-    """Record the transition and keep started/completed timestamps consistent."""
+def apply_status(task: Task, new_status: str, db: Session, at=None, stage: str | None = None) -> None:
+    """Record the transition and keep started/completed timestamps consistent.
+    `at` is when it really happened (events from other systems); `stage` is the project's own stage."""
     old = task.status if task.id and task.status else None
+    task.stage = stage
     if old == new_status:
         return
-    now = now_utc()
+    now = at or now_utc()
     task.status = new_status
     if new_status in ("in_progress", "blocked", "done") and task.started_at is None:
         task.started_at = now
@@ -34,6 +37,11 @@ def apply_status(task: Task, new_status: str, db: Session) -> None:
     elif old == "done":
         task.completed_at = None  # reopened
     db.add(TaskEvent(task=task, from_status=old, to_status=new_status, at=now))
+
+
+def notify(project_id: str, task_ids: list[str], deleted: bool = False, source: str = "app") -> None:
+    """Tell open screens for this project to refresh (a no-op when nobody is watching)."""
+    broker.publish(project_id, {"type": "change", "source": source, "task_ids": task_ids, "deleted": deleted})
 
 
 @router.get("/projects/{project_id}/tasks", response_model=list[TaskOut])
@@ -69,6 +77,7 @@ def create_task(
     apply_status(task, data["status"], db)
     db.commit()
     record_start(task, None, db)
+    notify(project.id, [task.id])
     return task
 
 
@@ -94,12 +103,15 @@ def update_task(
     db.commit()
     if new_status:
         record_start(task, old_status, db)
+    notify(task.project_id, [task.id])
     return task
 
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
     task = get_task_for_user(db, user, task_id, minimum="member")
+    project_id = task.project_id
     db.delete(task)
     db.commit()
+    notify(project_id, [task_id], deleted=True)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
