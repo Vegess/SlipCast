@@ -94,6 +94,34 @@
   .ring-pulse { transform-box: fill-box; transform-origin: center; animation: sc-ring 2.2s ease-out infinite; }
 }
 
+/* ---------- Live: bell, toasts, changed cards, live dot, pipeline diagram ---------- */
+@keyframes sc-ring-bell {
+  0%, 100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-12deg); }
+  45% { transform: rotate(9deg); } 60% { transform: rotate(-6deg); } 75% { transform: rotate(3deg); }
+}
+@keyframes sc-clapper { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-1.5px); } 50% { transform: translateX(1.5px); } }
+@keyframes sc-toast-in { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes sc-flash {
+  0% { box-shadow: 0 0 0 0 rgb(var(--c-accent) / 0.7); background-color: rgb(var(--c-accent) / 0.16); }
+  100% { box-shadow: 0 0 0 10px rgb(var(--c-accent) / 0); background-color: rgb(var(--c-panel)); }
+}
+@keyframes sc-live-dot { 0% { transform: scale(1); opacity: 0.75; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes sc-dash { to { stroke-dashoffset: -32; } }
+
+.bell { transform-origin: 12px 3px; }
+.bell.ringing { animation: sc-ring-bell 1s ease-in-out; }
+.bell.ringing .clapper { animation: sc-clapper 0.25s ease-in-out 4; }
+.toast { border-left-width: 3px; animation: sc-toast-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+.toast-ring { stroke-dasharray: 76; stroke-dashoffset: 76; animation: sc-draw 0.6s ease-out 0.1s forwards; }
+.toast-mark { stroke-dasharray: 24; stroke-dashoffset: 24; animation: sc-draw 0.4s ease-out 0.55s forwards; }
+.live-flash { animation: sc-flash 2.2s ease-out; }
+.live-dot { position: relative; display: inline-flex; height: 0.5rem; width: 0.5rem; border-radius: 9999px; }
+.live-dot::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: inherit; animation: sc-live-dot 1.8s ease-out infinite; }
+.flow-line { stroke-dasharray: 4 4; animation: sc-dash 1.2s linear infinite; }
+@keyframes sc-burst { 0% { opacity: 0; transform: scale(0.7); } 35% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+.engine-glow { transform-box: fill-box; transform-origin: center; }
+.engine-glow.burst { animation: sc-burst 0.9s ease-out; }
+
 /* Project tabs: the active underline is one element that slides between tabs on navigation. */
 .tab-link { position: relative; }
 .tab-link.tab-active::after {
@@ -112,6 +140,6 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
   .reveal { opacity: 1; transform: none; }
-  .draw-line { stroke-dashoffset: 0; }
+  .draw-line, .toast-ring, .toast-mark { stroke-dashoffset: 0; }
   ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
 }

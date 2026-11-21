@@ -67,6 +67,8 @@ import { ProviderButtons, SIGN_IN_ERRORS } from '../../shared/provider-buttons.c
             {{ mode() === 'signin' ? 'Create an account' : 'Sign in' }}
           </a>
         </p>
+        <p class="mt-4 text-xs text-muted">By continuing you agree to the <a routerLink="/terms" class="underline hover:text-fg">Terms</a>
+          and <a routerLink="/privacy" class="underline hover:text-fg">Privacy policy</a>.</p>
       </form>
     </section>
   </div>`,

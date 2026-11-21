@@ -51,6 +51,7 @@ interface Health {
             <button [draggable]="auth.canEdit()" (dragstart)="$event.dataTransfer?.setData('text/plain', t.id)" (click)="open(t)"
                     [style.--i]="i < 10 ? i : 10"
                     class="anim-rise lift block w-full rounded-lg border border-line border-l-[3px] bg-panel px-3 py-2.5 text-left hover:border-muted/60"
+                    [class.live-flash]="ctx.flashed().has(t.id)"
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
               <span class="block text-sm font-medium leading-snug">{{ t.title }}</span>
               <span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">

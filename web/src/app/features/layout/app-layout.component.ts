@@ -1,3 +1,4 @@
+import { AlertBell, Toaster } from '../../shared/alert-bell.component';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -10,7 +11,7 @@ import { AuthService } from '../../core/auth.service';
  */
 @Component({
   selector: 'app-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [AlertBell, Toaster, RouterOutlet, RouterLink, RouterLinkActive],
   template: `
   <div class="flex h-full flex-col">
     <header class="site-header relative z-40 shrink-0 border-b border-line bg-panel/95 backdrop-blur">
@@ -28,10 +29,12 @@ import { AuthService } from '../../core/auth.service';
             }
           </nav>
           <div class="ml-auto hidden items-center gap-3 md:flex">
+            <app-alert-bell />
             <span class="max-w-[180px] truncate text-sm text-muted">{{ auth.user()?.name }}</span>
             <button class="btn btn-ghost px-2.5 py-1.5 text-sm" (click)="auth.logout()">Sign out</button>
           </div>
-          <button class="btn btn-ghost ml-auto px-2.5 md:hidden" (click)="menu.set(!menu())"
+          <div class="ml-auto md:hidden"><app-alert-bell /></div>
+          <button class="btn btn-ghost px-2.5 md:hidden" (click)="menu.set(!menu())"
                   [attr.aria-expanded]="menu()" aria-controls="mobile-menu" aria-label="Menu">
             <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" class="stroke-fg" stroke-width="1.8" stroke-linecap="round">
               @if (menu()) { <path d="M5 5l10 10M15 5L5 15"/> } @else { <path d="M3 6h14M3 10h14M3 14h14"/> }
@@ -60,6 +63,7 @@ import { AuthService } from '../../core/auth.service';
       }
     </header>
     <div class="min-h-0 flex-1 overflow-y-auto"><router-outlet /></div>
+    @if (auth.user()) { <app-toaster /> }
   </div>`,
 })
 export class AppLayoutComponent implements OnInit {

@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CountUpDirective, RevealDirective } from '../../shared/motion';
+import { StoryDiagram } from '../../shared/story-diagram.component';
 
 interface Feature { imgCls?: string; kicker: string; title: string; body: string; points: string[]; img: string; alt: string; edge: string; kickerCls: string; }
 
@@ -27,7 +28,7 @@ const FEATURES: Feature[] = [
 
 @Component({
   selector: 'app-landing',
-  imports: [RouterLink, RevealDirective, CountUpDirective],
+  imports: [RouterLink, RevealDirective, CountUpDirective, StoryDiagram],
   template: `
   <div class="overflow-x-hidden">
     <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:pt-20">
@@ -63,6 +64,15 @@ const FEATURES: Feature[] = [
       </div>
     </section>
 
+    <section class="mx-auto max-w-6xl px-4 pt-16 sm:px-8">
+      <div appReveal class="max-w-2xl">
+        <p class="text-sm font-semibold uppercase tracking-wide text-info">How it reads a ticket</p>
+        <h2 class="mt-3 text-3xl font-bold leading-tight">From a sentence you type to a forecast that keeps score.</h2>
+        <p class="mt-3 text-muted">Four steps, a few hundred milliseconds, and no story points.</p>
+      </div>
+      <div class="mt-8"><app-story-diagram /></div>
+    </section>
+
     @for (f of features; track f.kicker; let i = $index) {
       <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-8 lg:grid-cols-2">
         <div appReveal [class.lg:order-2]="i % 2 === 1">
@@ -86,7 +96,9 @@ const FEATURES: Feature[] = [
         <a routerLink="/about" class="btn">How it works</a>
         <a routerLink="/login" [queryParams]="{ demo: 1 }" class="btn btn-primary">Try the demo</a>
       </div>
-      <p class="mt-8 text-center text-xs text-muted">SlipCast · open source · Angular, FastAPI, PostgreSQL, scikit-learn</p>
+      <p class="mt-8 text-center text-xs text-muted">SlipCast · open source · Angular, FastAPI, PostgreSQL, scikit-learn ·
+        <a routerLink="/privacy" class="hover:text-fg hover:underline">Privacy</a> ·
+        <a routerLink="/terms" class="hover:text-fg hover:underline">Terms</a></p>
     </section>
   </div>`,
 })
