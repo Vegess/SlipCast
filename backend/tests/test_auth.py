@@ -3,7 +3,7 @@ def test_register_creates_personal_workspace(client, make_user):
     me = client.get("/api/auth/me", headers=u["headers"]).json()
     assert me["user"]["email"] == "anirudh@example.com"
     assert me["workspaces"][0]["name"] == "Anirudh's workspace"
-    assert me["workspaces"][0]["role"] == "owner"
+    assert me["workspaces"][0]["role"] == "admin"
 
 
 def test_duplicate_email_rejected(client, make_user):

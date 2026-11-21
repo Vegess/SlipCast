@@ -21,9 +21,10 @@ def get_current_user(
     )
     if creds is None:
         raise unauthorized
-    user_id = decode_access_token(creds.credentials)
-    user = db.get(User, user_id) if user_id else None
-    if user is None:
+    decoded = decode_access_token(creds.credentials)
+    user = db.get(User, decoded[0]) if decoded else None
+    # A token from before "sign out everywhere" or a password change no longer works.
+    if user is None or decoded[1] != user.token_version:
         raise unauthorized
     return user
 
@@ -31,38 +32,58 @@ def get_current_user(
 # Tenant isolation: every lookup below joins through Membership, so a user can only
 # ever reach rows in workspaces they belong to. Missing access returns 404, not 403,
 # so the API never confirms that another tenant's resource exists.
+#
+# Roles: once membership is established, `minimum` says what the action needs.
+#   viewer  reads everything, changes nothing (403 on any write)
+#   member  creates and edits projects, tickets and imports
+#   admin   also deletes projects and manages the team and invite links
+# Routers pass `minimum`; they never compare role strings themselves.
+
+ROLE_RANK = {"viewer": 0, "member": 1, "admin": 2}
+FORBIDDEN = {
+    "member": "You have view-only access to this workspace. Ask an admin to make you a member.",
+    "admin": "Only workspace admins can do that.",
+}
 
 
-def require_membership(db: Session, user: User, workspace_id: str) -> Membership:
+def _check_role(role: str, minimum: str) -> None:
+    if ROLE_RANK.get(role, -1) < ROLE_RANK[minimum]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=FORBIDDEN[minimum])
+
+
+def require_membership(db: Session, user: User, workspace_id: str, minimum: str = "viewer") -> Membership:
     membership = db.scalar(
         select(Membership).where(Membership.user_id == user.id, Membership.workspace_id == workspace_id)
     )
     if membership is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
+    _check_role(membership.role, minimum)
     return membership
 
 
-def get_project_for_user(db: Session, user: User, project_id: str) -> Project:
-    project = db.scalar(
-        select(Project)
+def get_project_for_user(db: Session, user: User, project_id: str, minimum: str = "viewer") -> Project:
+    row = db.execute(
+        select(Project, Membership.role)
         .join(Membership, Membership.workspace_id == Project.workspace_id)
         .where(Project.id == project_id, Membership.user_id == user.id)
-    )
-    if project is None:
+    ).first()
+    if row is None:
         raise HTTPException(status_code=404, detail="Project not found")
-    return project
+    _check_role(row[1], minimum)
+    return row[0]
 
 
-def get_task_for_user(db: Session, user: User, task_id: str) -> Task:
-    task = db.scalar(
-        select(Task)
+def get_task_for_user(db: Session, user: User, task_id: str, minimum: str = "viewer") -> Task:
+    row = db.execute(
+        select(Task, Membership.role)
         .join(Project, Project.id == Task.project_id)
         .join(Membership, Membership.workspace_id == Project.workspace_id)
         .where(Task.id == task_id, Membership.user_id == user.id)
-    )
-    if task is None:
+    ).first()
+    if row is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    return task
+    _check_role(row[1], minimum)
+    return row[0]
 
 
 def get_import_for_user(db: Session, user: User, import_id: str) -> ImportRecord:

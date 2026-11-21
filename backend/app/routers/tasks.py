@@ -49,7 +49,7 @@ def create_task(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Task:
-    project = get_project_for_user(db, user, project_id)
+    project = get_project_for_user(db, user, project_id, minimum="member")
     last = db.scalar(select(func.max(Task.position)).where(Task.project_id == project.id))
     data = body.model_dump()
     task = Task(
@@ -79,7 +79,7 @@ def update_task(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> Task:
-    task = get_task_for_user(db, user, task_id)
+    task = get_task_for_user(db, user, task_id, minimum="member")
     changes = body.model_dump(exclude_unset=True)
     new_status = changes.pop("status", None)
     for field, value in changes.items():
@@ -99,7 +99,7 @@ def update_task(
 
 @router.delete("/tasks/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(task_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
-    task = get_task_for_user(db, user, task_id)
+    task = get_task_for_user(db, user, task_id, minimum="member")
     db.delete(task)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

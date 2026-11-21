@@ -101,7 +101,7 @@ def feedback(
     project_id: str, body: FeedbackIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ) -> None:
     """Record whether a suggestion was helpful (one vote per user per suggestion; later votes replace it)."""
-    project = get_project_for_user(db, user, project_id)
+    project = get_project_for_user(db, user, project_id, minimum="member")
     row = db.scalar(
         select(AdviceFeedback).where(
             AdviceFeedback.project_id == project.id,

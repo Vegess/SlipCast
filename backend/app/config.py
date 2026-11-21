@@ -19,6 +19,17 @@ class Settings(BaseSettings):
 
     cors_origins: str = "http://localhost:4200"
 
+    # Sign in with Google / GitHub. A provider's button only appears when both its values are set.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    github_client_id: str = ""
+    github_client_secret: str = ""
+    # Where the web app lives (sign-in and invite links point here) and, optionally, the API's
+    # own public URL. Without PUBLIC_API_URL it is worked out from the request (proxy-aware).
+    public_web_url: str = "http://localhost:4200"
+    public_api_url: str = ""
+    invite_days: int = 7
+
     # Optional LLM advice layer. Without a key, rule-based advice is used everywhere.
     groq_api_key: str = ""
     groq_model: str = "llama-3.3-70b-versatile"
