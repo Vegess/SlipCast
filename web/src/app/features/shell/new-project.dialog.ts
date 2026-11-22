@@ -31,6 +31,10 @@ import { ModalComponent } from '../../shared/modal.component';
           }
         </div>
       </fieldset>
+      @if (module === 'shipments') {
+        <p class="-mt-1 text-xs text-muted">Just looking? <button type="button" class="font-medium text-accent hover:underline" (click)="demo()" [disabled]="busy()">{{ busy() ? 'Loading…' : 'Open the demo orders' }}</button>
+          (four months of simulated orders from a D2C brand) instead of starting empty.</p>
+      }
       @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
     </form>
     <ng-container footer>
@@ -45,13 +49,14 @@ export class NewProjectDialog {
   readonly closed = output<void>();
   readonly created = output<Project>();
   readonly error = signal('');
+  readonly busy = signal(false);
   name = ''; goal = '';
   module = 'software';
-  /** One engine, three modules; Ship and Serve arrive in the next releases. */
+  /** One engine, three modules; Serve arrives in the next release. */
   readonly modules = [
     { id: 'software', name: 'Build', ready: true, soon: '', stroke: 'stroke-info',
       note: 'Tickets, pull requests and releases. Forecasts, review times and DORA metrics.', icon: 'M9 10l-3 5 3 5M21 10l3 5-3 5M17 8l-4 14' },
-    { id: 'shipments', name: 'Ship', ready: false, soon: 'Coming in v1.5', stroke: 'stroke-accent',
+    { id: 'shipments', name: 'Ship', ready: true, soon: '', stroke: 'stroke-accent',
       note: 'Customer orders and deliveries: late-delivery risk by route and carrier.', icon: 'M6 11h12v9H6zM18 14h4l2 3v3h-6M9 23a1.5 1.5 0 1 0 0-3M20 23a1.5 1.5 0 1 0 0-3' },
     { id: 'services', name: 'Serve', ready: false, soon: 'Coming in v1.6', stroke: 'stroke-violet',
       note: 'Service jobs and appointments: missed-visit risk and real job durations.', icon: 'M8 22l7-7M14 9a4 4 0 1 0 5 5l3 3-2 2-3-3a4 4 0 0 1-3-7z' },
@@ -60,8 +65,16 @@ export class NewProjectDialog {
   async save() {
     try {
       const p = await this.api.post<Project>(`/workspaces/${this.store.workspaceId()}/projects`,
-        { name: this.name.trim(), goal: this.goal.trim() });
+        { name: this.name.trim(), goal: this.goal.trim(), template: this.module });
       this.created.emit(p);
     } catch (e) { this.error.set(errorMessage(e)); }
+  }
+
+  async demo() {
+    this.busy.set(true);
+    try {
+      this.created.emit(await this.api.post<Project>(`/workspaces/${this.store.workspaceId()}/demo-project?template=shipments`));
+    } catch (e) { this.error.set(errorMessage(e)); }
+    finally { this.busy.set(false); }
   }
 }

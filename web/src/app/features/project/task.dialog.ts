@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, inject, input, output, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Api, errorMessage } from '../../core/api.service';
 import { KIND_LABEL, STATUSES, Task, TicketCheck } from '../../core/models';
@@ -7,15 +7,39 @@ import { WorkspaceStore } from '../../core/workspace.store';
 import { ProjectContext } from './project.context';
 import { AuthService } from '../../core/auth.service';
 
+interface OrderEstimate {
+  available: boolean; reason?: string; basis: string; n: number; p10: number; p50: number; p90: number;
+  planned_days: number | null; late_share: number | null; under_planned?: boolean;
+  carriers_on_route: { carrier: string; on_time_rate: number; delivered: number }[];
+}
+
 @Component({
   selector: 'app-task-dialog',
   imports: [FormsModule, ModalComponent],
   template: `
-  <app-modal [heading]="task() ? (auth.canEdit() ? 'Ticket' : 'Ticket (view only)') : 'New ticket'" [wide]="true" (closed)="closed.emit()">
+  <app-modal [heading]="heading()" [wide]="true" (closed)="closed.emit()">
     <div class="grid gap-6 sm:grid-cols-[minmax(0,1fr)_260px]">
       <form id="task-form" class="grid content-start gap-4" (ngSubmit)="save()" (input)="schedule()" (change)="schedule()">
         <label class="label">Title <input class="input" name="title" [(ngModel)]="form.title" maxlength="140" required></label>
         <label class="label">Description <textarea class="input min-h-[120px]" name="description" [(ngModel)]="form.description" maxlength="5000"></textarea></label>
+        @if (isOrder) {
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="label">From (warehouse) <input class="input" name="origin" [(ngModel)]="order.origin" maxlength="60" list="ship-places" placeholder="e.g. Chennai"></label>
+            <label class="label">To <input class="input" name="destination" [(ngModel)]="order.destination" maxlength="60" list="ship-places" placeholder="e.g. Delhi"></label>
+            <label class="label">Carrier <input class="input" name="carrier" [(ngModel)]="order.carrier" maxlength="40" list="ship-carriers"></label>
+            <label class="label">Service
+              <select class="input" name="service" [(ngModel)]="order.service"><option value="standard">Standard</option><option value="express">Express</option></select>
+            </label>
+            <label class="label">Promised delivery date <input class="input" type="date" name="due" [(ngModel)]="form.due"></label>
+            <label class="label">Stage
+              <select class="input" name="stage" [(ngModel)]="order.stage">@for (s of shipStages; track s[0]) { <option [value]="s[0]">{{ s[1] }}</option> }</select>
+            </label>
+            <label class="label">Weight (kg) <input class="input" type="number" min="0" step="0.1" name="weight" [(ngModel)]="order.weight_kg"></label>
+            <label class="label">Order value <input class="input" type="number" min="0" step="1" name="value" [(ngModel)]="order.order_value"></label>
+          </div>
+          <datalist id="ship-places">@for (x of places(); track x) { <option [value]="x"></option> }</datalist>
+          <datalist id="ship-carriers">@for (x of carriers(); track x) { <option [value]="x"></option> }</datalist>
+        } @else {
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="label">Owner <input class="input" name="owner" [(ngModel)]="form.owner" maxlength="40"></label>
           <label class="label">Due date <input class="input" type="date" name="due" [(ngModel)]="form.due"></label>
@@ -32,9 +56,46 @@ import { AuthService } from '../../core/auth.service';
             </select>
           </label>
         </div>
+        }
         @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
       </form>
 
+      @if (isOrder) {
+      <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line border-t-2 border-t-violet/80 bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Order check">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-wide text-muted">Order check</p>
+          <p class="mt-1 text-xs text-muted">How long orders like this really took, from this project's deliveries. It never blocks saving.</p>
+        </div>
+        @if (estimate(); as e) {
+          @if (e.available) {
+            <div>
+              <p class="text-xs font-medium text-muted">Orders like this took</p>
+              <p class="mt-1 font-display text-2xl">{{ e.p10 }}–{{ e.p90 }} <span class="text-sm text-muted">days</span></p>
+              <p class="text-xs text-muted">Typical {{ e.p50 }} days · {{ e.n }} {{ e.basis }}</p>
+            </div>
+            @if (e.planned_days !== null) {
+              <div>
+                <p class="text-xs font-medium text-muted">Against your promise of {{ e.planned_days }} day{{ e.planned_days === 1 ? '' : 's' }}</p>
+                <p class="mt-1 font-display text-2xl" [class.text-bad]="(e.late_share ?? 0) >= .6" [class.text-accent]="(e.late_share ?? 0) >= .3 && (e.late_share ?? 0) < .6" [class.text-ok]="(e.late_share ?? 0) < .3">{{ ((e.late_share ?? 0) * 100).toFixed(0) }}%</p>
+                <p class="text-xs text-muted">of them would have arrived after that date.@if (e.under_planned) { <span class="text-bad"> The promise is shorter than 3 in 4 of them took.</span> }</p>
+              </div>
+            }
+            @if (e.carriers_on_route.length > 1) {
+              <div>
+                <p class="text-xs font-medium text-muted">On time on this route, by carrier</p>
+                <ul class="mt-1.5 space-y-1 text-xs">
+                  @for (c of e.carriers_on_route; track c.carrier) {
+                    <li class="flex items-center gap-2"><span class="w-24 truncate" [class.font-semibold]="c.carrier === order.carrier">{{ c.carrier }}</span>
+                      <span class="h-1.5 flex-1 overflow-hidden rounded bg-line"><span class="block h-full rounded bg-ok/80" [style.width.%]="c.on_time_rate * 100"></span></span>
+                      <span class="w-9 text-right text-muted">{{ (c.on_time_rate * 100).toFixed(0) }}%</span></li>
+                  }
+                </ul>
+              </div>
+            }
+          } @else { <p class="text-xs text-muted">{{ e.reason }}</p> }
+        } @else { <p class="text-xs text-muted">{{ checkError() || 'Add where it ships from and to.' }}</p> }
+      </aside>
+      } @else {
       <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line border-t-2 border-t-violet/80 bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Ticket check">
         <div>
           <p class="text-xs font-medium uppercase tracking-wide text-muted">Ticket check</p>
@@ -85,6 +146,7 @@ import { AuthService } from '../../core/auth.service';
           }
         } @else { <p class="text-xs text-muted">{{ checkError() || 'Start typing to check this ticket.' }}</p> }
       </aside>
+      }
     </div>
 
     <ng-container footer>
@@ -101,6 +163,24 @@ import { AuthService } from '../../core/auth.service';
 })
 export class TaskDialog implements OnInit, OnDestroy {
   private ctx = inject(ProjectContext);
+  /** Ship projects edit orders: route, carrier, service and stage instead of owner and type. */
+  readonly isOrder = this.ctx.template() === 'shipments';
+  readonly shipStages = [['ordered', 'Ordered'], ['packed', 'Packed'], ['dispatched', 'Dispatched'], ['in_transit', 'In transit'],
+    ['out_for_delivery', 'Out for delivery'], ['exception', 'Exception'], ['delivered', 'Delivered']];
+  order = { origin: '', destination: '', carrier: '', service: 'standard', stage: 'ordered', weight_kg: null as number | null, order_value: null as number | null };
+  readonly estimate = signal<OrderEstimate | null>(null);
+  /** Places and carriers already used in this project, offered as suggestions. */
+  readonly places = computed(() => this.distinct(['origin', 'destination']));
+  readonly carriers = computed(() => this.distinct(['carrier']));
+  private distinct(keys: string[]) {
+    const out = new Set<string>();
+    for (const t of this.ctx.tasks()) for (const k of keys) { const v = t.attributes?.[k]; if (typeof v === 'string' && v) out.add(v); }
+    return [...out].sort();
+  }
+  heading() {
+    const one = this.ctx.noun().one, title = one.charAt(0).toUpperCase() + one.slice(1);
+    return this.task() ? (this.auth.canEdit() ? title : `${title} (view only)`) : `New ${one}`;
+  }
   readonly auth = inject(AuthService);
   private api = inject(Api);
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -142,6 +222,11 @@ export class TaskDialog implements OnInit, OnDestroy {
     if (t) {
       this.form = { title: t.title, description: t.description, owner: t.owner, due: t.due ?? '', status: t.status,
         priority: t.priority, kind: t.kind_source === 'label' ? t.kind : null };
+      const a = t.attributes ?? {};
+      const str = (k: string) => (typeof a[k] === 'string' ? (a[k] as string) : '');
+      const num = (k: string) => (typeof a[k] === 'number' ? (a[k] as number) : null);
+      this.order = { origin: str('origin'), destination: str('destination'), carrier: str('carrier') || t.owner,
+        service: str('service') || 'standard', stage: t.stage || 'ordered', weight_kg: num('weight_kg'), order_value: num('order_value') };
     }
     this.runCheck();
   }
@@ -157,6 +242,17 @@ export class TaskDialog implements OnInit, OnDestroy {
   private async runCheck() {
     const seq = ++this.seq;
     const f = this.form;
+    if (this.isOrder) {
+      const o = this.order;
+      if (!o.destination.trim() && !o.carrier.trim()) { this.estimate.set(null); return; }
+      try {
+        const r = await this.api.post<OrderEstimate>(`/projects/${this.ctx.id()}/ship/estimate`, {
+          origin: o.origin, destination: o.destination, carrier: o.carrier, service: o.service, due: f.due || null,
+        });
+        if (seq === this.seq) { this.estimate.set(r); this.checkError.set(''); }
+      } catch (e) { if (seq === this.seq) this.checkError.set(errorMessage(e)); }
+      return;
+    }
     try {
       const r = await this.api.post<TicketCheck>(`/projects/${this.ctx.id()}/ticket-check`, {
         title: f.title, description: f.description, owner: f.owner, due: f.due || null, priority: f.priority,
@@ -170,10 +266,21 @@ export class TaskDialog implements OnInit, OnDestroy {
 
   async save() {
     if (!this.auth.canEdit()) return;
-    if (!this.form.title.trim()) { this.error.set('Add a title to save the ticket.'); return; }
+    if (!this.form.title.trim()) { this.error.set(`Add a title to save the ${this.ctx.noun().one}.`); return; }
     this.saving.set(true);
     const body: Record<string, unknown> = { ...this.form, due: this.form.due || null };
     if (!body['kind']) delete body['kind'];
+    if (this.isOrder) {
+      const o = this.order, prev = this.task()?.attributes ?? {};
+      const attributes: Record<string, unknown> = { ...prev, origin: o.origin.trim(), destination: o.destination.trim(),
+        carrier: o.carrier.trim(), service: o.service };
+      if (o.weight_kg !== null) attributes['weight_kg'] = o.weight_kg;
+      if (o.order_value !== null) attributes['order_value'] = o.order_value;
+      Object.assign(body, { owner: o.carrier.trim(), priority: o.service === 'express' ? 'high' : 'medium', attributes });
+      delete body['status'];
+      if (o.stage !== (this.task()?.stage ?? '')) body['stage'] = o.stage;
+      if (!this.task()) body['item_type'] = 'order';
+    }
     try {
       const t = this.task();
       if (t) await this.ctx.updateTask(t.id, body as Partial<Task>);

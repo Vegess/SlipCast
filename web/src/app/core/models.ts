@@ -8,13 +8,23 @@ export interface Workspace { id: string; name: string; role: string; }
 export interface Project {
   id: string; workspace_id: string; name: string; goal: string; color: string;
   created_at: string; task_count: number; done_count: number;
+  /** The module: software (Build) or shipments (Ship). */
+  template?: Template;
 }
+
+export type Template = 'software' | 'shipments';
+/** What one promise is called in each module. */
+export const NOUN: Record<Template, { one: string; many: string }> = {
+  software: { one: 'ticket', many: 'tickets' },
+  shipments: { one: 'order', many: 'orders' },
+};
 
 export interface Task {
   id: string; project_id: string; title: string; owner: string; status: Status;
   priority: Priority; due: string | null; notes: string; description: string;
   kind: Kind | null; kind_source: string; started_at: string | null; completed_at: string | null;
   position: number; created_at: string; updated_at: string;
+  stage?: string | null; item_type?: string; attributes?: Record<string, unknown> | null;
 }
 
 export interface Finding { id: string; kind: string; severity: 'info' | 'warning' | 'critical'; text: string; }
