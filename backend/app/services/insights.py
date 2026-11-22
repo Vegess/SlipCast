@@ -47,6 +47,11 @@ WORDS = {
         "unowned": "Express orders have no carrier", "not_started": "Due within 3 days and not packed yet",
         "due": "promised date",
     },
+    "services": {
+        "one": "job", "many": "jobs", "blocked": "rescheduled", "unblock": "Confirm a new time with the customer.",
+        "unowned": "Urgent jobs have no technician", "not_started": "Due within 3 days and not assigned yet",
+        "due": "appointment date",
+    },
 }  # fmt: skip
 
 

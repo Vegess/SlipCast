@@ -6,6 +6,42 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-22
+
+The Serve module (Phase 4.3, step 3): service jobs and appointments.
+
+### Added
+- **Serve** in the new-project dialog, with a link to the demo jobs. Job stages: booked,
+  scheduled, assigned, en route, on site, done, plus rescheduled and cancelled. Job fields:
+  service type, area, technician, appointment window and hours booked.
+- **Missed visits:** a visit counts as missed when the technician arrives after the window
+  or the job is rescheduled; cancelled jobs don't count either way.
+- **Missed-visit risk** combines the technician's miss rate over the last 6 weeks, the miss
+  rate on days as busy as this one for them (up to 2 jobs, 3, or 4 or more), and the miss
+  rate for that time of day, each pulled toward the overall rate when based on few visits.
+  The area was tested and added nothing, so it only appears in the breakdowns. A window that
+  passed with nobody on site counts as missed.
+- **Job length** from a reference class (same service by the same technician, else the same
+  service, else the technician's jobs, with at least 8 jobs): "jobs like this took 1.5–3
+  hours", flagged when the hours booked are shorter than 3 in 4 of them took.
+- **Delivery tab, "Visits and technicians":** on-time arrivals for the last 4 weeks against
+  the 4 before, typical job length, visits in the next 7 days, visits likely to be missed
+  with reasons and the technician's load that day, weekly on-time chart, "busy days run
+  late", technicians (on time, took vs booked, load for the next 7 days and their busiest
+  day), services (booked vs real length, reschedules), areas, and where jobs wait.
+- **Job check** in the new-job dialog: how long jobs like it took, the chance the visit is
+  missed, and who else does the service with how many jobs they already have that day.
+- Demo jobs: eleven weeks from a made-up home-services company in Bengaluru, with each
+  technician's day simulated job by job (travel, overruns, under-booked AC repairs, a slow
+  technician, far areas, reschedules for parts).
+- Endpoints `GET /projects/{id}/analytics/serve` and `POST /projects/{id}/serve/estimate`;
+  `POST /workspaces/{id}/demo-project?template=services`.
+- Health checks and the board in job words: "Underway", "Rescheduled", "no technician".
+
+### Fixed
+- The on-time trend on the Ship and Serve cards could read "▼ 0 pts"; it now compares the
+  same rounded percentages it shows.
+
 ## [1.5.0] - 2026-11-22
 
 The Ship module (Phase 4.3, step 2): customer orders and deliveries, on simulated data and

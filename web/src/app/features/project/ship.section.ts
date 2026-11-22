@@ -224,8 +224,10 @@ export class ShipSection {
 
   trend(s: Ship): { arrow: string; text: string; good: boolean } | null {
     const { value, previous } = s.on_time;
-    if (value == null || previous == null || Math.round(value * 100) === Math.round(previous * 100)) return null;
-    return { arrow: value > previous ? '▲' : '▼', text: `${Math.abs(Math.round((value - previous) * 100))} pts`, good: value > previous };
+    if (value == null || previous == null) return null;
+    const pts = Math.round(value * 100) - Math.round(previous * 100);  // the same rounding as the shown percentages
+    if (pts === 0) return null;
+    return { arrow: pts > 0 ? '▲' : '▼', text: `${Math.abs(pts)} pts`, good: pts > 0 };
   }
 
   readonly weeklyChart = computed(() => {

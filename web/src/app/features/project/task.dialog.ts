@@ -13,6 +13,13 @@ interface OrderEstimate {
   carriers_on_route: { carrier: string; on_time_rate: number; delivered: number }[];
 }
 
+interface JobCheck {
+  available: boolean; reason?: string; estimate_short?: boolean;
+  duration: { basis: string; n: number; p10: number; p50: number; p90: number } | null;
+  miss_risk: { risk: number; jobs_that_day: number; reasons: string[] } | null;
+  technicians: { tech: string; on_time_rate: number; jobs_that_day: number | null }[];
+}
+
 @Component({
   selector: 'app-task-dialog',
   imports: [FormsModule, ModalComponent],
@@ -22,7 +29,25 @@ interface OrderEstimate {
       <form id="task-form" class="grid content-start gap-4" (ngSubmit)="save()" (input)="schedule()" (change)="schedule()">
         <label class="label">Title <input class="input" name="title" [(ngModel)]="form.title" maxlength="140" required></label>
         <label class="label">Description <textarea class="input min-h-[120px]" name="description" [(ngModel)]="form.description" maxlength="5000"></textarea></label>
-        @if (isOrder) {
+        @if (isJob) {
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="label">Service <input class="input" name="service_type" [(ngModel)]="job.service_type" maxlength="60" list="serve-services" placeholder="e.g. AC repair"></label>
+            <label class="label">Area <input class="input" name="area" [(ngModel)]="job.area" maxlength="60" list="serve-areas" placeholder="e.g. Indiranagar"></label>
+            <label class="label">Technician <input class="input" name="technician" [(ngModel)]="job.technician" maxlength="40" list="serve-techs"></label>
+            <label class="label">Booked for (hours) <input class="input" type="number" min="0" max="48" step="0.25" name="estimate" [(ngModel)]="job.estimate_hours"></label>
+            <label class="label">Appointment date <input class="input" type="date" name="due" [(ngModel)]="form.due"></label>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="label">From <input class="input" type="time" name="from" [(ngModel)]="job.from"></label>
+              <label class="label">To <input class="input" type="time" name="to" [(ngModel)]="job.to"></label>
+            </div>
+            <label class="label">Stage
+              <select class="input" name="jstage" [(ngModel)]="job.stage">@for (s of jobStages; track s[0]) { <option [value]="s[0]">{{ s[1] }}</option> }</select>
+            </label>
+          </div>
+          <datalist id="serve-services">@for (x of distinctOf(['service_type']); track x) { <option [value]="x"></option> }</datalist>
+          <datalist id="serve-areas">@for (x of distinctOf(['area']); track x) { <option [value]="x"></option> }</datalist>
+          <datalist id="serve-techs">@for (x of distinctOf(['technician']); track x) { <option [value]="x"></option> }</datalist>
+        } @else if (isOrder) {
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="label">From (warehouse) <input class="input" name="origin" [(ngModel)]="order.origin" maxlength="60" list="ship-places" placeholder="e.g. Chennai"></label>
             <label class="label">To <input class="input" name="destination" [(ngModel)]="order.destination" maxlength="60" list="ship-places" placeholder="e.g. Delhi"></label>
@@ -60,7 +85,46 @@ interface OrderEstimate {
         @if (error()) { <p class="text-sm text-bad">{{ error() }}</p> }
       </form>
 
-      @if (isOrder) {
+      @if (isJob) {
+      <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line border-t-2 border-t-violet/80 bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Job check">
+        <div>
+          <p class="text-xs font-medium uppercase tracking-wide text-muted">Job check</p>
+          <p class="mt-1 text-xs text-muted">From this project's past visits, as you fill in the booking. It never blocks saving.</p>
+        </div>
+        @if (jobCheck(); as c) {
+          @if (c.available) {
+            @if (c.duration; as d) {
+              <div>
+                <p class="text-xs font-medium text-muted">Jobs like this took</p>
+                <p class="mt-1 font-display text-2xl">{{ d.p10 }}–{{ d.p90 }} <span class="text-sm text-muted">hours</span></p>
+                <p class="text-xs text-muted">Typical {{ d.p50 }} h · {{ d.n }} {{ d.basis }}</p>
+                @if (c.estimate_short) { <p class="mt-1 text-xs text-bad">Booked for {{ job.estimate_hours }} h: shorter than 3 in 4 of them took.</p> }
+              </div>
+            }
+            @if (c.miss_risk; as r) {
+              <div>
+                <p class="text-xs font-medium text-muted">Chance the visit is missed</p>
+                <p class="mt-1 font-display text-2xl" [class.text-bad]="r.risk >= .5" [class.text-accent]="r.risk >= .25 && r.risk < .5" [class.text-ok]="r.risk < .25">{{ (r.risk * 100).toFixed(0) }}%</p>
+                <p class="text-xs text-muted">Late arrival or a reschedule. {{ job.technician }} would have {{ r.jobs_that_day }} job{{ r.jobs_that_day === 1 ? '' : 's' }} that day.</p>
+                @if (r.reasons.length) { <ul class="mt-1 list-disc space-y-0.5 pl-4 text-xs text-muted">@for (x of r.reasons; track x) { <li>{{ x }}</li> }</ul> }
+              </div>
+            }
+          } @else { <p class="text-xs text-muted">{{ c.reason }}</p> }
+          @if (c.technicians.length > 1) {
+            <div>
+              <p class="text-xs font-medium text-muted">Who else does this{{ form.due ? ', and how busy they are that day' : '' }}</p>
+              <ul class="mt-1.5 space-y-1 text-xs">
+                @for (t of c.technicians.slice(0, 5); track t.tech) {
+                  <li class="flex items-center gap-2"><span class="w-20 truncate" [class.font-semibold]="t.tech === job.technician">{{ t.tech }}</span>
+                    <span class="flex-1 text-muted">{{ (t.on_time_rate * 100).toFixed(0) }}% on time</span>
+                    @if (t.jobs_that_day !== null) { <span [class.text-bad]="t.jobs_that_day >= 3" [class.text-muted]="t.jobs_that_day < 3">{{ t.jobs_that_day }} booked</span> }</li>
+                }
+              </ul>
+            </div>
+          }
+        } @else { <p class="text-xs text-muted">{{ checkError() || 'Add the service and technician.' }}</p> }
+      </aside>
+      } @else if (isOrder) {
       <aside class="flex min-w-0 flex-col gap-4 self-start rounded-xl border border-line border-t-2 border-t-violet/80 bg-canvas/60 p-4 text-sm" aria-live="polite" aria-label="Order check">
         <div>
           <p class="text-xs font-medium uppercase tracking-wide text-muted">Order check</p>
@@ -165,6 +229,19 @@ export class TaskDialog implements OnInit, OnDestroy {
   private ctx = inject(ProjectContext);
   /** Ship projects edit orders: route, carrier, service and stage instead of owner and type. */
   readonly isOrder = this.ctx.template() === 'shipments';
+  /** Serve projects edit jobs: service, area, technician, appointment window and booked hours. */
+  readonly isJob = this.ctx.template() === 'services';
+  readonly jobStages = [['booked', 'Booked'], ['scheduled', 'Scheduled'], ['assigned', 'Assigned'], ['en_route', 'En route'],
+    ['on_site', 'On site'], ['done', 'Done'], ['rescheduled', 'Rescheduled'], ['cancelled', 'Cancelled']];
+  job = { service_type: '', area: '', technician: '', estimate_hours: null as number | null, from: '10:00', to: '12:00', stage: 'booked' };
+  readonly jobCheck = signal<JobCheck | null>(null);
+  distinctOf(keys: string[]) { return this.distinct(keys); }
+  /** The appointment window as UTC ISO strings, from the local date and times typed in. */
+  private windowISO(): [string | null, string | null] {
+    if (!this.form.due) return [null, null];
+    const at = (t: string) => { const d = new Date(`${this.form.due}T${t || '00:00'}`); return isNaN(d.getTime()) ? null : d.toISOString(); };
+    return [at(this.job.from), at(this.job.to)];
+  }
   readonly shipStages = [['ordered', 'Ordered'], ['packed', 'Packed'], ['dispatched', 'Dispatched'], ['in_transit', 'In transit'],
     ['out_for_delivery', 'Out for delivery'], ['exception', 'Exception'], ['delivered', 'Delivered']];
   order = { origin: '', destination: '', carrier: '', service: 'standard', stage: 'ordered', weight_kg: null as number | null, order_value: null as number | null };
@@ -225,6 +302,14 @@ export class TaskDialog implements OnInit, OnDestroy {
       const a = t.attributes ?? {};
       const str = (k: string) => (typeof a[k] === 'string' ? (a[k] as string) : '');
       const num = (k: string) => (typeof a[k] === 'number' ? (a[k] as number) : null);
+      const local = (iso: string) => { const d = new Date(iso); return isNaN(d.getTime()) ? '' : d.toTimeString().slice(0, 5); };
+      this.job = { service_type: str('service_type'), area: str('area'), technician: str('technician') || t.owner,
+        estimate_hours: num('estimate_hours'), from: str('window_start') ? local(str('window_start')) : '10:00',
+        to: str('window_end') ? local(str('window_end')) : '12:00', stage: t.stage || 'booked' };
+      if (this.isJob && str('window_start')) {
+        const d = new Date(str('window_start'));
+        if (!isNaN(d.getTime())) this.form.due = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
       this.order = { origin: str('origin'), destination: str('destination'), carrier: str('carrier') || t.owner,
         service: str('service') || 'standard', stage: t.stage || 'ordered', weight_kg: num('weight_kg'), order_value: num('order_value') };
     }
@@ -242,6 +327,18 @@ export class TaskDialog implements OnInit, OnDestroy {
   private async runCheck() {
     const seq = ++this.seq;
     const f = this.form;
+    if (this.isJob) {
+      const j = this.job;
+      if (!j.service_type.trim() && !j.technician.trim()) { this.jobCheck.set(null); return; }
+      try {
+        const r = await this.api.post<JobCheck>(`/projects/${this.ctx.id()}/serve/estimate`, {
+          service_type: j.service_type, area: j.area, technician: j.technician, window_start: this.windowISO()[0],
+          estimate_hours: j.estimate_hours,
+        });
+        if (seq === this.seq) { this.jobCheck.set(r); this.checkError.set(''); }
+      } catch (e) { if (seq === this.seq) this.checkError.set(errorMessage(e)); }
+      return;
+    }
     if (this.isOrder) {
       const o = this.order;
       if (!o.destination.trim() && !o.carrier.trim()) { this.estimate.set(null); return; }
@@ -270,6 +367,17 @@ export class TaskDialog implements OnInit, OnDestroy {
     this.saving.set(true);
     const body: Record<string, unknown> = { ...this.form, due: this.form.due || null };
     if (!body['kind']) delete body['kind'];
+    if (this.isJob) {
+      const j = this.job, prev = this.task()?.attributes ?? {};
+      const [start, end] = this.windowISO();
+      const attributes: Record<string, unknown> = { ...prev, service_type: j.service_type.trim(), area: j.area.trim(),
+        technician: j.technician.trim(), window_start: start, window_end: end };
+      if (j.estimate_hours !== null) attributes['estimate_hours'] = j.estimate_hours;
+      Object.assign(body, { owner: j.technician.trim(), attributes });
+      delete body['status'];
+      if (j.stage !== (this.task()?.stage ?? '')) body['stage'] = j.stage;
+      if (!this.task()) body['item_type'] = 'job';
+    }
     if (this.isOrder) {
       const o = this.order, prev = this.task()?.attributes ?? {};
       const attributes: Record<string, unknown> = { ...prev, origin: o.origin.trim(), destination: o.destination.trim(),

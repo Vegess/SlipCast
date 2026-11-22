@@ -383,7 +383,7 @@ the new-project dialog, with one sentence explaining each.
    realistic **simulated** demo dataset and the event API. **A courier tracking API is a
    third-party service: ask the owner before adding one.** Stage updates only: no live
    GPS, maps or driver app.
-3. **Serve (v1.6):** service jobs. Stages Booked, Scheduled, Assigned, En route, On site,
+3. **Serve (v1.6, done):** service jobs. Stages Booked, Scheduled, Assigned, En route, On site,
    Done, plus Rescheduled and Cancelled. Fields service type, location area, technician,
    appointment window, duration estimate. Predicts the risk of a missed or rescheduled
    visit and the real job duration ("jobs like this took 1.5–3 hours"); breakdowns by

@@ -92,8 +92,8 @@ class ProjectIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     goal: str = Field(default="", max_length=300)
     color: str | None = HexColor
-    # The module: Build (software) or Ship (shipments). Serve arrives in 1.6.
-    template: Literal["software", "shipments"] = "software"
+    # The module: Build (software), Ship (shipments) or Serve (services).
+    template: Literal["software", "shipments", "services"] = "software"
 
 
 class ProjectUpdate(BaseModel):
@@ -201,6 +201,14 @@ class StatusReportOut(BaseModel):
 
 
 # ---------- analytics ----------
+class JobDraftIn(BaseModel):
+    service_type: str = Field(default="", max_length=60)
+    area: str = Field(default="", max_length=60)
+    technician: str = Field(default="", max_length=40)
+    window_start: datetime | None = None
+    estimate_hours: float | None = Field(default=None, ge=0, le=48)
+
+
 class OrderDraftIn(BaseModel):
     origin: str = Field(default="", max_length=60)
     destination: str = Field(default="", max_length=60)
