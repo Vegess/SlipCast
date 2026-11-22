@@ -8,15 +8,16 @@ export interface Workspace { id: string; name: string; role: string; }
 export interface Project {
   id: string; workspace_id: string; name: string; goal: string; color: string;
   created_at: string; task_count: number; done_count: number;
-  /** The module: software (Build) or shipments (Ship). */
+  /** The module: software (Build), shipments (Ship) or services (Serve). */
   template?: Template;
 }
 
-export type Template = 'software' | 'shipments';
+export type Template = 'software' | 'shipments' | 'services';
 /** What one promise is called in each module. */
 export const NOUN: Record<Template, { one: string; many: string }> = {
   software: { one: 'ticket', many: 'tickets' },
   shipments: { one: 'order', many: 'orders' },
+  services: { one: 'job', many: 'jobs' },
 };
 
 export interface Task {

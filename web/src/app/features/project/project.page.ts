@@ -21,7 +21,7 @@ import { AuthService } from '../../core/auth.service';
                    (blur)="rename($any($event.target).value)"
                    class="w-full max-w-3xl rounded-md bg-transparent font-display text-3xl font-bold hover:bg-raised/50 focus:bg-raised/50 focus:outline-none sm:text-4xl">
             <p class="mt-1 text-sm text-muted">
-              @if (p.goal) { {{ p.goal }} · } {{ p.done_count }} of {{ p.task_count }} {{ ctx.noun().many }} {{ p.template === 'shipments' ? 'delivered' : 'done' }}
+              @if (p.goal) { {{ p.goal }} · } {{ p.done_count }} of {{ p.task_count }} {{ ctx.noun().many }} {{ p.template === 'shipments' ? 'delivered' : p.template === 'services' ? 'closed' : 'done' }}
               <span class="ml-2 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 align-middle text-xs"
                     [class]="ctx.live() === 'live' ? 'bg-ok/10 text-ok-strong' : 'bg-raised text-muted'"
                     [title]="ctx.live() === 'live' ? 'This page updates by itself when anything changes' : 'Connecting to live updates'">

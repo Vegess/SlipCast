@@ -7,6 +7,7 @@ import { ChartComponent, PALETTE, baseOption } from '../../shared/chart.componen
 import { longDate, num, pct } from '../../shared/format';
 import { KindChip } from '../../shared/kind-chip.component';
 import { BuildSection } from './build.section';
+import { ServeSection } from './serve.section';
 import { ShipSection } from './ship.section';
 import { projectResource } from './loader';
 
@@ -23,7 +24,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
 
 @Component({
   selector: 'app-delivery-view',
-  imports: [ChartComponent, NgClass, KindChip, BuildSection, ShipSection],
+  imports: [ChartComponent, NgClass, KindChip, BuildSection, ShipSection, ServeSection],
   template: `
   <div class="mb-5 flex flex-wrap items-center gap-2">
     <p class="note mr-auto">How work flows through this project. Export the same numbers to analyse them elsewhere.</p>
@@ -31,10 +32,11 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
     <button class="btn" (click)="download('export/bi.zip', 'slipcast-bi.zip')" [disabled]="busy()">Export for Tableau / Power BI</button>
   </div>
   @if (exportError()) { <p class="mb-3 text-sm text-bad">{{ exportError() }}</p> }
-  @if (ctx.template() === 'shipments') {
-    <app-ship-section />
+  @if (ctx.template() !== 'software') {
+    @if (ctx.template() === 'shipments') { <app-ship-section /> } @else { <app-serve-section /> }
     <h2 class="mb-1 mt-10 text-xl font-semibold">Flow</h2>
-    <p class="note mb-4">The same flow numbers every project gets. For orders, "cycle time" runs from packed to delivered.</p>
+    <p class="note mb-4">The same flow numbers every project gets. For {{ ctx.noun().many }}, "cycle time" runs from
+      {{ ctx.template() === 'shipments' ? 'packed to delivered' : 'assigned to done' }}.</p>
   }
   @if (flow.error() || ov.error()) { <p class="text-sm text-bad">{{ flow.error() || ov.error() }}</p> }
   @if (ov.data(); as o) {

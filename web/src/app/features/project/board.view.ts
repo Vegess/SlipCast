@@ -55,7 +55,7 @@ interface Health {
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
               <span class="block text-sm font-medium leading-snug">{{ t.title }}</span>
               <span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                <span>{{ t.owner || (ctx.template() === 'shipments' ? 'No carrier' : 'Unassigned') }}</span>
+                <span>{{ t.owner || (ctx.template() === 'shipments' ? 'No carrier' : ctx.template() === 'services' ? 'No technician' : 'Unassigned') }}</span>
                 @if (t.kind) { <app-kind-chip [kind]="t.kind" /> }
                 @if (t.stage && ctx.template() !== 'software') { <span class="rounded bg-line/60 px-1.5 py-0.5 text-fg/80">{{ stageLabel(t.stage) }}</span> }
                 <span [class.text-bad]="late(t)" [class.font-semibold]="late(t)">{{ late(t) ? 'Overdue · ' : '' }}{{ date(t.due) }}</span>
@@ -80,8 +80,11 @@ interface Health {
 export class BoardView {
   readonly ctx = inject(ProjectContext);
   /** Column names in the project's own words (an order is "On the way", not "In progress"). */
-  private readonly shipColumns: Record<string, string> = { planned: 'Ordered', in_progress: 'On the way', blocked: 'Exception', done: 'Delivered' };
-  column(s: { id: string; label: string }) { return this.ctx.template() === 'shipments' ? this.shipColumns[s.id] : s.label; }
+  private readonly columnNames: Record<string, Record<string, string>> = {
+    shipments: { planned: 'Ordered', in_progress: 'On the way', blocked: 'Exception', done: 'Delivered' },
+    services: { planned: 'Booked', in_progress: 'Underway', blocked: 'Rescheduled', done: 'Done or cancelled' },
+  };
+  column(s: { id: string; label: string }) { return this.columnNames[this.ctx.template()]?.[s.id] ?? s.label; }
   stageLabel(key: string) { const t = key.replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); }
   readonly auth = inject(AuthService);
   private api = inject(Api);
