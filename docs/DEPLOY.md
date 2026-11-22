@@ -204,6 +204,14 @@ run a single instance (the default on Render). Each connection closes after 5 mi
 design and the page reconnects on its own. Nothing else needs configuring; to send events,
 create a key on a project's **Live feed** tab.
 
+## Connect GitHub (Build module)
+
+On a project's **Live feed** tab, an admin clicks **Connect GitHub** and copies the payload
+URL and secret into the repository's **Settings → Webhooks → Add webhook** (content type
+`application/json`; events: Pull requests, Pull request reviews, Releases, Deployment
+statuses). The secret is derived from `JWT_SECRET`, so changing `JWT_SECRET` changes every
+project's webhook secret: rotate it in SlipCast and paste it into GitHub again.
+
 ## Troubleshooting
 
 | Symptom | Fix |
@@ -216,5 +224,6 @@ create a key on a project's **Live feed** tab.
 | Sign-in returns to the login page with "took too long" | The sign-in was started more than 10 minutes earlier, or in a different browser. Try again. |
 | The project header says "Connecting…" | The API is asleep or unreachable, or `CORS_ORIGINS` doesn't include the site. The page keeps retrying. |
 | Events return 401 | The key was revoked, belongs to another project, or isn't in the `X-SlipCast-Key` header. |
+| GitHub shows deliveries failing with 401 | The webhook secret doesn't match. Click **New secret** on the Live feed tab and paste it into the webhook. |
 | Neon connection errors | Keep `?sslmode=require` on the URL; check the Neon project is not suspended. |
 | Advice always says "Rule-based" | Expected without `GROQ_API_KEY`. With a key, check the API logs for `LLM call failed`. |

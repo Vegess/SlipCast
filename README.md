@@ -56,6 +56,12 @@ pages share a top navigation bar that collapses to a menu on mobile; every page 
 |---|---|---|
 | ![Landing page](docs/screenshots/landing.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Imports](docs/screenshots/imports.png) |
 
+### Pull requests, releases and DORA (Build module)
+Connect a GitHub repository with a webhook and the Delivery tab adds the four DORA metrics
+(deployments a week, lead time, failed deployments, recovery time), how long pull requests
+wait for a first review, and how long PRs of each size take to merge, so an open PR gets a
+reference-class estimate: "PRs this size took 15–36 hours".
+
 ### Live updates and alerts
 Other systems can send stage changes to a project through the event API with a project key.
 Every open screen refreshes within about a second, changed cards glow, and a bell and toasts
@@ -260,7 +266,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 114 tests
+pytest                                   # 121 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -279,6 +285,8 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | GET, POST, DELETE | `/projects/{id}/api-keys[/{id}]`; GET `/projects/{id}/stages` | Per-project API keys (admins) and stages |
 | POST | `/projects/{id}/stream-token`; GET `/projects/{id}/stream` | Live updates over Server-Sent Events |
 | GET | `/projects/{id}/alerts`, `/workspaces/{id}/alerts` | Forecast moves and risky new work |
+| GET, POST, DELETE | `/projects/{id}/github`; POST `/projects/{id}/github/webhook` | Connect a GitHub repository; signed webhook deliveries |
+| GET | `/projects/{id}/analytics/build` | Review wait, merge time by PR size, DORA metrics |
 | GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |
