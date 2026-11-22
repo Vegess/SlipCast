@@ -31,6 +31,8 @@ export const routes: Routes = [
         children: [
           { path: 'dashboard', title: 'Dashboard · SlipCast',
             loadComponent: () => import('./features/dashboard/dashboard.page').then((m) => m.DashboardPage) },
+          { path: 'control-room', title: 'Control Room · SlipCast',
+            loadComponent: () => import('./features/control-room/control-room.page').then((m) => m.ControlRoomPage) },
           { path: 'imports', title: 'Imports · SlipCast',
             loadComponent: () => import('./features/imports/imports.page').then((m) => m.ImportsPage) },
           {
