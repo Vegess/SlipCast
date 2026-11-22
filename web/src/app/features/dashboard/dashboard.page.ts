@@ -2,7 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Api, errorMessage } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
-import { Project } from '../../core/models';
+import { NOUN, Project, Template } from '../../core/models';
 import { WorkspaceStore } from '../../core/workspace.store';
 import { longDate } from '../../shared/format';
 
@@ -29,7 +29,7 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
   template: `
   <div class="mx-auto max-w-6xl px-4 py-8 sm:px-8">
     <h1 class="text-3xl font-bold">Hi {{ firstName() }}</h1>
-    <p class="note mt-1">Every project at a glance: its health, open work, when it is 85% likely to finish, and how many tickets are likely to slip.</p>
+    <p class="note mt-1">Every project at a glance: its health, open work, when it is 85% likely to finish, and how many promises are likely to slip.</p>
     @if (error()) { <p class="mt-4 text-sm text-bad">{{ error() }}</p> }
 
     @if (loaded() && !cards().length) {
@@ -43,6 +43,15 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
       </section>
     }
 
+    @if (loaded() && cards().length && missing().length && auth.canEdit()) {
+      <div class="mt-6 flex flex-wrap items-center gap-2 rounded-xl border border-line bg-panel/60 px-4 py-3 text-sm">
+        <span class="mr-auto text-muted">SlipCast also forecasts {{ missingText() }}. Try a module with sample data:</span>
+        @for (m of missing(); track m.template) {
+          <button class="btn px-3 py-1.5 text-sm" (click)="loadDemo(m.template)" [disabled]="busy()">{{ busy() ? 'Loading…' : m.label }}</button>
+        }
+      </div>
+    }
+
     <div class="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
       @for (c of cards(); track c.project.id) {
         <a [routerLink]="['/projects', c.project.id, 'board']" class="card card-info block transition-colors hover:border-muted/60">
@@ -50,7 +59,8 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
             <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="c.project.color"></span>
             <div class="min-w-0">
               <h2 class="truncate font-display text-lg font-medium">{{ c.project.name }}</h2>
-              <p class="text-xs text-muted">{{ c.project.done_count }} of {{ c.project.task_count }} tickets done</p>
+              <p class="text-xs text-muted">{{ c.project.done_count }} of {{ c.project.task_count }} {{ noun(c.project).many }} {{ c.project.template === 'shipments' ? 'delivered' : c.project.template === 'services' ? 'closed' : 'done' }}
+                @if (c.project.template && c.project.template !== 'software') { · {{ c.project.template === 'shipments' ? 'Ship' : 'Serve' }} }</p>
             </div>
           </div>
           @if (c.error) { <p class="mt-4 text-sm text-bad">{{ c.error }}</p> } @else {
@@ -60,7 +70,7 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
                 <dd class="mt-0.5 font-display text-lg" [class]="c.health ? health[c.health].cls : 'text-muted'">{{ c.health ? health[c.health].label : '…' }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-muted">Open tickets</dt>
+                <dt class="text-xs text-muted">Open {{ noun(c.project).many }}</dt>
                 <dd class="mt-0.5 font-display text-lg">{{ c.open }}</dd>
               </div>
               <div>
@@ -71,7 +81,7 @@ const HEALTH: Record<Health, { label: string; cls: string }> = {
               <div>
                 <dt class="text-xs text-muted">High slip risk</dt>
                 <dd class="mt-0.5 font-display text-lg" [class.text-bad]="(c.highRisk ?? 0) > 0">{{ c.highRisk ?? '—' }}</dd>
-                @if (c.highRisk === null) { <dd class="text-xs text-muted">Needs more finished tickets with due dates</dd> }
+                @if (c.highRisk === null) { <dd class="text-xs text-muted">Needs more finished {{ noun(c.project).many }} with due dates</dd> }
               </div>
             </dl>
           }
@@ -144,10 +154,23 @@ export class DashboardPage implements OnInit {
     }));
   }
 
-  async loadDemo() {
+  noun(p: Project) { return NOUN[p.template ?? 'software']; }
+
+  /** Modules the workspace hasn't tried yet, offered with their sample data. */
+  missing() {
+    const have = new Set(this.cards().map((c) => c.project.template ?? 'software'));
+    return ([['shipments', 'Demo orders'], ['services', 'Demo service visits']] as [Template, string][])
+      .filter(([t]) => !have.has(t)).map(([template, label]) => ({ template, label }));
+  }
+  missingText() {
+    const words = this.missing().map((m) => (m.template === 'shipments' ? 'customer orders' : 'service visits'));
+    return words.join(' and ');
+  }
+
+  async loadDemo(template: Template = 'software') {
     this.busy.set(true);
     try {
-      await this.api.post(`/workspaces/${this.store.workspaceId()}/demo-project`);
+      await this.api.post(`/workspaces/${this.store.workspaceId()}/demo-project?template=${template}`);
       this.loaded.set(false);
       await this.ngOnInit();
     } catch (e) { this.error.set(errorMessage(e)); }
