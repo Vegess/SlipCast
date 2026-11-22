@@ -71,6 +71,7 @@ def create_project(
         name=body.name.strip(),
         goal=body.goal.strip(),
         color=body.color or next_color(db, workspace_id),
+        template=body.template,
     )
     db.add(project)
     db.commit()
@@ -116,7 +117,7 @@ def project_insights(
     project = get_project_for_user(db, user, project_id)
     tasks = db.scalars(select(Task).where(Task.project_id == project.id, Task.item_type.notin_(BUILD_TYPES))).all()
     views = [insights.TaskView(t.id, t.title, t.owner, t.status, t.priority, t.due) for t in tasks]
-    result = insights.analyse(views, date.today())
+    result = insights.analyse(views, date.today(), project.template)
     return InsightsOut(
         project_id=project.id,
         health=result.health,

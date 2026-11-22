@@ -7,6 +7,7 @@ import { ChartComponent, PALETTE, baseOption } from '../../shared/chart.componen
 import { longDate, num, pct } from '../../shared/format';
 import { KindChip } from '../../shared/kind-chip.component';
 import { BuildSection } from './build.section';
+import { ShipSection } from './ship.section';
 import { projectResource } from './loader';
 
 interface Breakdown { key: string; open: number; done: number; median_cycle_days: number | null; p85_cycle_days: number | null; slip_rate: number | null; }
@@ -22,7 +23,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
 
 @Component({
   selector: 'app-delivery-view',
-  imports: [ChartComponent, NgClass, KindChip, BuildSection],
+  imports: [ChartComponent, NgClass, KindChip, BuildSection, ShipSection],
   template: `
   <div class="mb-5 flex flex-wrap items-center gap-2">
     <p class="note mr-auto">How work flows through this project. Export the same numbers to analyse them elsewhere.</p>
@@ -30,22 +31,27 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
     <button class="btn" (click)="download('export/bi.zip', 'slipcast-bi.zip')" [disabled]="busy()">Export for Tableau / Power BI</button>
   </div>
   @if (exportError()) { <p class="mb-3 text-sm text-bad">{{ exportError() }}</p> }
+  @if (ctx.template() === 'shipments') {
+    <app-ship-section />
+    <h2 class="mb-1 mt-10 text-xl font-semibold">Flow</h2>
+    <p class="note mb-4">The same flow numbers every project gets. For orders, "cycle time" runs from packed to delivered.</p>
+  }
   @if (flow.error() || ov.error()) { <p class="text-sm text-bad">{{ flow.error() || ov.error() }}</p> }
   @if (ov.data(); as o) {
     <div class="mb-6 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3 xl:grid-cols-6">
-      <div><p class="stat-value">{{ o.open }}</p><p class="note mt-1">open tickets</p></div>
+      <div><p class="stat-value">{{ o.open }}</p><p class="note mt-1">open {{ ctx.noun().many }}</p></div>
       <div><p class="stat-value">{{ num(o.cycle.p50) }}<span class="text-base text-muted"> d</span></p><p class="note mt-1">median cycle time</p></div>
       <div><p class="stat-value">{{ num(o.cycle.p85) }}<span class="text-base text-muted"> d</span></p><p class="note mt-1">85% finish within</p></div>
-      <div><p class="stat-value">{{ num(o.throughput_avg) }}</p><p class="note mt-1">tickets done / week</p></div>
+      <div><p class="stat-value">{{ num(o.throughput_avg) }}</p><p class="note mt-1">{{ ctx.noun().many }} done / week</p></div>
       <div><p class="stat-value text-accent">{{ o.forecast_p85 ? longDate(o.forecast_p85) : '—' }}</p><p class="note mt-1">all open work done (85%)</p></div>
       @if (o.high_risk !== null) {
-        <div><p class="stat-value" [class.text-bad]="o.high_risk > 0">{{ o.high_risk }}</p><p class="note mt-1">high slip-risk tickets</p></div>
+        <div><p class="stat-value" [class.text-bad]="o.high_risk > 0">{{ o.high_risk }}</p><p class="note mt-1">high slip-risk {{ ctx.noun().many }}</p></div>
       }
     </div>
   }
   @if (flow.data(); as f) {
     @if (!f.available) {
-      <p class="note">{{ f.reason }} Finish some tickets (or import history) to see flow metrics.</p>
+      <p class="note">{{ f.reason }} Finish some {{ ctx.noun().many }} (or import history) to see flow metrics.</p>
     } @else {
       <div class="grid gap-5 xl:grid-cols-2">
         <section class="card card-info">
@@ -118,11 +124,11 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
       <p class="note">Crunching the numbers…</p>
     </div>
   }
-  <app-build-section />`,
+  @if (ctx.template() === 'software') { <app-build-section /> }`,
 })
 export class DeliveryView {
   private api = inject(Api);
-  private ctx = inject(ProjectContext);
+  readonly ctx = inject(ProjectContext);
   readonly busy = signal(false);
   readonly exportError = signal('');
 

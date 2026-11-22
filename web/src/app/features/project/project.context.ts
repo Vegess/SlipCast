@@ -1,8 +1,8 @@
-import { Injectable, OnDestroy, inject, signal } from '@angular/core';
+import { Injectable, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Alert, AlertsService } from '../../core/alerts.service';
 import { Api } from '../../core/api.service';
 import { API_URL } from '../../core/config';
-import { Project, Task } from '../../core/models';
+import { NOUN, Project, Task } from '../../core/models';
 import { WorkspaceStore } from '../../core/workspace.store';
 
 /** State for the open project, shared by its tab views. Provided by ProjectPage. */
@@ -28,6 +28,9 @@ export class ProjectContext implements OnDestroy {
   readonly id = signal<string>('');
   readonly project = signal<Project | null>(null);
   readonly tasks = signal<Task[]>([]);
+  /** The project's module and what its items are called ("ticket", "order"). */
+  readonly template = computed(() => this.project()?.template ?? 'software');
+  readonly noun = computed(() => NOUN[this.template()]);
   /** Bumped after any change so analytics views refetch. */
   readonly version = signal(0);
 

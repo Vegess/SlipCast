@@ -1,7 +1,8 @@
+import json
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field
 
 Status = Literal["planned", "in_progress", "blocked", "done"]
 Priority = Literal["low", "medium", "high"]
@@ -91,6 +92,8 @@ class ProjectIn(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     goal: str = Field(default="", max_length=300)
     color: str | None = HexColor
+    # The module: Build (software) or Ship (shipments). Serve arrives in 1.6.
+    template: Literal["software", "shipments"] = "software"
 
 
 class ProjectUpdate(BaseModel):
@@ -106,12 +109,22 @@ class ProjectOut(BaseModel):
     name: str
     goal: str
     color: str
+    template: str = "software"
     created_at: datetime
     task_count: int = 0
     done_count: int = 0
 
 
 # ---------- tasks ----------
+def _small_attributes(value: dict | None) -> dict | None:
+    if value is not None and (len(value) > 30 or len(json.dumps(value, default=str)) > 4000):
+        raise ValueError("attributes: at most 30 fields and 4,000 characters")
+    return value
+
+
+Attributes = Annotated[dict | None, AfterValidator(_small_attributes)]
+
+
 class TaskIn(BaseModel):
     title: str = Field(min_length=1, max_length=140)
     owner: str = Field(default="", max_length=40)
@@ -121,6 +134,10 @@ class TaskIn(BaseModel):
     notes: str = Field(default="", max_length=2000)
     description: str = Field(default="", max_length=5000)
     kind: Kind | None = None
+    # Modules: the project's own stage (sets the status), the item's type and its fields.
+    stage: str | None = Field(default=None, max_length=40)
+    item_type: str = Field(default="", max_length=20)
+    attributes: Attributes = None
 
 
 class TaskUpdate(BaseModel):
@@ -133,6 +150,8 @@ class TaskUpdate(BaseModel):
     description: str | None = Field(default=None, max_length=5000)
     kind: Kind | None = None
     position: int | None = Field(default=None, ge=0)
+    stage: str | None = Field(default=None, max_length=40)
+    attributes: Attributes = None
 
 
 class TaskOut(BaseModel):
@@ -182,6 +201,14 @@ class StatusReportOut(BaseModel):
 
 
 # ---------- analytics ----------
+class OrderDraftIn(BaseModel):
+    origin: str = Field(default="", max_length=60)
+    destination: str = Field(default="", max_length=60)
+    carrier: str = Field(default="", max_length=40)
+    service: str = Field(default="", max_length=20, description="e.g. standard or express")
+    due: date | None = None
+
+
 class DraftIn(BaseModel):
     """A ticket as it is being written; nothing is saved."""
 

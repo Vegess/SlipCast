@@ -376,7 +376,7 @@ the new-project dialog, with one sentence explaining each.
    (signature verified with the webhook secret). PR stages: opened, in review, approved,
    merged. Release stages: tagged, deployed. Adds review wait time, PR-size reference
    classes, and the four DORA metrics on the Delivery tab.
-2. **Ship (v1.5):** stages Ordered, Packed, Dispatched, In transit, Out for delivery,
+2. **Ship (v1.5, done):** stages Ordered, Packed, Dispatched, In transit, Out for delivery,
    Delivered, plus Exception. Fields origin, destination, carrier, promised date, weight,
    order value. Late-delivery risk by route and carrier; reference class "orders like
    this on this route took 3 to 6 days"; on-time rate by carrier and route. Starts on a

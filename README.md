@@ -62,6 +62,17 @@ Connect a GitHub repository with a webhook and the Delivery tab adds the four DO
 wait for a first review, and how long PRs of each size take to merge, so an open PR gets a
 reference-class estimate: "PRs this size took 15–36 hours".
 
+### Orders, carriers and routes (Ship module)
+Pick **Ship** when creating a project, or open the demo orders from the same dialog. Orders
+move through ordered, packed, dispatched, in transit, out for delivery and delivered (plus
+exception), sent by your order system through the event API. The Delivery tab shows the
+on-time rate against the promised date, where orders wait between stages, carriers and routes
+ranked by how often they keep the promise, and open orders likely to arrive late, each with
+its reasons ("Promised 2 days; orders to Guwahati took 5.3–11.1"). While you type a new
+order, an **order check** shows how long orders like it took, how many would have missed your
+promised date, and which carrier is most reliable on that route. To watch it live, run
+`python scripts/simulate_orders.py --project <id> --key <API key>`.
+
 ### Live updates and alerts
 Other systems can send stage changes to a project through the event API with a project key.
 Every open screen refreshes within about a second, changed cards glow, and a bell and toasts
@@ -143,6 +154,17 @@ with [notebooks/02_model_evaluation.ipynb](notebooks/02_model_evaluation.ipynb).
 | Monte Carlo forecast (backtest) | P85 hit rate | **0.95** | 0.85 | target |
 | Forecast ledger (replayed history) | Hit rate within P85 | **0.83** | 0.85 | target |
 | Theme clustering (K-means) | Cosine silhouette | 0.21 | | 0.1–0.3 is typical for short text |
+
+**Ship module**, on the demo orders (476 simulated orders over four months, measured on
+22 November 2026; the demo is generated relative to today, so the numbers move a little).
+Each of the newest 30% of delivered orders is estimated only from orders delivered before it
+was placed.
+
+| Model | Metric | SlipCast | Baseline | Baseline is |
+|---|---|---|---|---|
+| Delivery-time reference class (route, carrier, service) | P10–P90 coverage | 0.69 | 0.80 | target (ranges are a little narrow) |
+| | P50 error (days) | **1.23** | 1.65 | the usual delivery time of all earlier orders |
+| Late-delivery risk (route and recent carrier late rates) | ROC-AUC | **0.87** | 0.85 | the carrier's late rate alone |
 
 The demo data is synthetic, so these numbers show the methods work rather than promise the
 same accuracy everywhere. That is exactly why the forecast ledger exists: it measures accuracy
@@ -266,7 +288,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 121 tests
+pytest                                   # 127 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -287,10 +309,11 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | GET | `/projects/{id}/alerts`, `/workspaces/{id}/alerts` | Forecast moves and risky new work |
 | GET, POST, DELETE | `/projects/{id}/github`; POST `/projects/{id}/github/webhook` | Connect a GitHub repository; signed webhook deliveries |
 | GET | `/projects/{id}/analytics/build` | Review wait, merge time by PR size, DORA metrics |
+| GET | `/projects/{id}/analytics/ship`; POST `/projects/{id}/ship/estimate` | On-time rate by carrier and route, stage waits, orders likely to be late; write-time order estimate |
 | GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |
-| POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project` | CSV import with quality report; demo project |
+| POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project?template=software\|shipments` | CSV import with quality report; demo project per module |
 | GET | `/workspaces/{id}/imports`, `/imports/{id}` | Past imports and their data-quality reports |
 | GET, PATCH, DELETE | `/projects/{id}`; GET `/projects/{id}/insights` | Project and rule-based health |
 | GET, POST | `/projects/{id}/tasks`; PATCH, DELETE `/tasks/{id}` | Tickets (status changes are recorded) |

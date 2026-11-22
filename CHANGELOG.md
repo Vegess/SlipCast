@@ -6,6 +6,43 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-22
+
+The Ship module (Phase 4.3, step 2): customer orders and deliveries, on simulated data and
+the event API. No courier tracking service, GPS or maps.
+
+### Added
+- **Pick a module when creating a project:** Build (tickets) or Ship (orders). Projects keep
+  one engine; Ship adds its stages, order fields, wording and breakdowns.
+- Order stages: ordered, packed, dispatched, in transit, out for delivery, delivered, plus
+  exception. Order fields: origin, destination, carrier, service (standard or express),
+  promised date, weight and order value.
+- **Delivery tab, "Orders and deliveries":** on-time rate for the last 4 weeks against the 4
+  before, typical delivery time, orders on the way and with exceptions, the weekly on-time
+  rate, where orders wait between stages, carriers and routes ranked by on-time rate, and
+  open orders likely to arrive late with their reasons and expected date.
+- **Late-delivery risk** combines the route's late rate (same service level) and the
+  carrier's late rate over the last 6 weeks, each pulled toward the overall rate when based
+  on few orders. Past the promised date, an exception, or being slower than 9 in 10 similar
+  orders raise it. Back-tested against the carrier's record alone.
+- **Reference class per order:** "orders like this on this route took 3–6 days", from the
+  most specific group with at least 8 delivered orders (route, carrier and service; then
+  route; then destination; then carrier).
+- **Order check** in the new-order dialog: how long similar orders took, how many would have
+  missed your promised date, and the on-time rate of each carrier on that route.
+- Demo orders: four months from a made-up D2C brand shipping from Chennai and Mumbai, with
+  under-promised remote routes, a cheap slow carrier, a carrier that got slower and a sale
+  that doubled orders this week. Open them from the new-project dialog.
+- `scripts/simulate_orders.py` sends realistic order events to any Ship project, so you can
+  watch the screens update. Plain Python, no packages.
+- Endpoints `GET /projects/{id}/analytics/ship` and `POST /projects/{id}/ship/estimate`;
+  `POST /workspaces/{id}/demo-project?template=shipments`.
+- Tasks accept `stage`, `item_type` and `attributes`, so orders can be added and moved by hand.
+
+### Changed
+- The board, project header, health checks and dialogs use the module's words: "order",
+  "On the way", "promised date", "no carrier".
+
 ## [1.4.0] - 2026-11-22
 
 The Build module (Phase 4.3, step 1): pull requests, releases and deployments from GitHub.

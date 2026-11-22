@@ -33,15 +33,15 @@ interface Health {
     </section>
   }
   <div class="mb-4 flex flex-wrap items-center gap-3">
-    <input class="input max-w-xs" placeholder="Filter tickets…" [ngModel]="filter()" (ngModelChange)="filter.set($event)" aria-label="Filter tickets">
-    @if (auth.canEdit()) { <button class="btn ml-auto" (click)="open(null)">+ Add ticket</button> }
+    <input class="input max-w-xs" [placeholder]="'Filter ' + ctx.noun().many + '…'" [ngModel]="filter()" (ngModelChange)="filter.set($event)" [attr.aria-label]="'Filter ' + ctx.noun().many">
+    @if (auth.canEdit()) { <button class="btn ml-auto" (click)="open(null)">+ Add {{ ctx.noun().one }}</button> }
   </div>
   @if (error()) { <p class="mb-3 text-sm text-bad">{{ error() }}</p> }
   <div class="flex gap-4 overflow-x-auto pb-2">
     @for (s of statuses; track s.id) {
-      <section class="flex min-w-[250px] flex-1 flex-col" [attr.aria-label]="s.label">
+      <section class="flex min-w-[250px] flex-1 flex-col" [attr.aria-label]="column(s)">
         <header class="flex items-center gap-2 px-1 pb-2.5 text-sm font-semibold">
-          <span class="h-3.5 w-[3px] rounded" [style.background]="s.color"></span>{{ s.label }}
+          <span class="h-3.5 w-[3px] rounded" [style.background]="s.color"></span>{{ column(s) }}
           <span class="font-normal text-muted">{{ columns()[s.id].total }}</span>
         </header>
         <div class="flex min-h-[140px] flex-1 flex-col gap-2 rounded-xl bg-canvas/60 p-2 ring-1"
@@ -55,8 +55,9 @@ interface Health {
                     [class.border-l-bad]="t.priority === 'high'" [class.border-l-accent]="t.priority === 'medium'">
               <span class="block text-sm font-medium leading-snug">{{ t.title }}</span>
               <span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
-                <span>{{ t.owner || 'Unassigned' }}</span>
+                <span>{{ t.owner || (ctx.template() === 'shipments' ? 'No carrier' : 'Unassigned') }}</span>
                 @if (t.kind) { <app-kind-chip [kind]="t.kind" /> }
+                @if (t.stage && ctx.template() !== 'software') { <span class="rounded bg-line/60 px-1.5 py-0.5 text-fg/80">{{ stageLabel(t.stage) }}</span> }
                 <span [class.text-bad]="late(t)" [class.font-semibold]="late(t)">{{ late(t) ? 'Overdue · ' : '' }}{{ date(t.due) }}</span>
               </span>
             </button>
@@ -65,7 +66,7 @@ interface Health {
             <p class="px-1 text-xs text-muted">Showing the {{ columns()[s.id].items.length }} most recent of {{ columns()[s.id].total }}.</p>
           }
           @if (auth.canEdit()) {
-            <input class="input mt-auto bg-transparent" placeholder="Quick add…" maxlength="140" [attr.aria-label]="'Quick add to ' + s.label"
+            <input class="input mt-auto bg-transparent" placeholder="Quick add…" maxlength="140" [attr.aria-label]="'Quick add to ' + column(s)"
                    (keydown.enter)="quickAdd($any($event.target), s.id)">
           }
         </div>
@@ -78,6 +79,10 @@ interface Health {
 })
 export class BoardView {
   readonly ctx = inject(ProjectContext);
+  /** Column names in the project's own words (an order is "On the way", not "In progress"). */
+  private readonly shipColumns: Record<string, string> = { planned: 'Ordered', in_progress: 'On the way', blocked: 'Exception', done: 'Delivered' };
+  column(s: { id: string; label: string }) { return this.ctx.template() === 'shipments' ? this.shipColumns[s.id] : s.label; }
+  stageLabel(key: string) { const t = key.replace(/_/g, ' '); return t.charAt(0).toUpperCase() + t.slice(1); }
   readonly auth = inject(AuthService);
   private api = inject(Api);
   readonly health = signal<Health | null>(null);
