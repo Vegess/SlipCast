@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
 from app.models import User
-from app.schemas import DraftIn, OrderDraftIn
-from app.services import build_metrics, export, ledger, ship_metrics
+from app.schemas import DraftIn, JobDraftIn, OrderDraftIn
+from app.services import build_metrics, export, ledger, serve_metrics, ship_metrics
 from app.services.analysis import get_analysis
 from app.timeutil import now_utc
 
@@ -128,6 +128,31 @@ def ship_estimate(
     today = now_utc().date()
     return ship_metrics.check(
         db, project.id, body.origin, body.destination, body.carrier, body.due, today, body.service
+    )
+
+
+@router.get("/projects/{project_id}/analytics/serve")
+def serve_analytics(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Service jobs: missed visits, real job durations, technician load, and upcoming visits at risk."""
+    project = get_project_for_user(db, user, project_id)
+    return serve_metrics.compute(db, project.id, now_utc())
+
+
+@router.post("/projects/{project_id}/serve/estimate")
+def serve_estimate(
+    project_id: str, body: JobDraftIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> dict:
+    """Write-time check for a job being booked: how long it will take and the chance the visit is missed."""
+    project = get_project_for_user(db, user, project_id)
+    return serve_metrics.check(
+        db,
+        project.id,
+        body.service_type,
+        body.area,
+        body.technician,
+        body.window_start,
+        body.estimate_hours,
+        now_utc(),
     )
 
 

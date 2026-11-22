@@ -8,7 +8,7 @@ from app.db import get_db
 from app.deps import get_current_user, get_import_for_user, require_membership
 from app.models import ImportRecord, IngestedEvent, Project, Task, TaskEvent, User
 from app.routers.projects import _counts, _out, next_color
-from app.services import analysis, demo_data, demo_orders, importer, ledger
+from app.services import analysis, demo_data, demo_jobs, demo_orders, importer, ledger
 from app.services.stages import stages_for, status_for
 from app.timeutil import naive_utc, now_utc
 
@@ -18,6 +18,7 @@ DEMO_NAME = "Atlas Billing (demo)"
 DEMOS = {
     "software": (DEMO_NAME, "Six months of sample tickets from a SaaS billing team"),
     "shipments": ("Northwind Goods (demo)", "Four months of simulated orders from a D2C brand shipping across India"),
+    "services": ("Brightfix Home Services (demo)", "Eleven weeks of simulated service visits across Bengaluru"),
 }
 
 
@@ -89,7 +90,7 @@ def _save_staged(db: Session, project: Project, rows: list[dict], start_position
 def create_demo_project(
     workspace_id: str,
     response: Response,
-    template: Literal["software", "shipments"] = Query("software"),
+    template: Literal["software", "shipments", "services"] = Query("software"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -107,10 +108,11 @@ def create_demo_project(
     db.add(project)
     db.flush()
     now = naive_utc(now_utc())
-    if template == "shipments":
-        rows = demo_orders.generate_orders(now)
+    if template in ("shipments", "services"):
+        rows = (demo_orders.generate_orders if template == "shipments" else demo_jobs.generate_jobs)(now)
+        rows = [r for r in rows if r["events"]]  # jobs not booked yet don't exist
         _save_staged(db, project, rows, 0)
-        done = sum(r["events"][-1][0] == "delivered" for r in rows)
+        done = sum(r["events"][-1][0] in ("delivered", "done", "cancelled") for r in rows)
     else:
         rows = demo_data.generate(now)
         _save(db, project, rows, lambda r: r["events"])
