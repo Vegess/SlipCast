@@ -6,6 +6,7 @@ import { KIND_LABEL } from '../../core/models';
 import { ChartComponent, PALETTE, baseOption } from '../../shared/chart.component';
 import { longDate, num, pct } from '../../shared/format';
 import { KindChip } from '../../shared/kind-chip.component';
+import { BuildSection } from './build.section';
 import { projectResource } from './loader';
 
 interface Breakdown { key: string; open: number; done: number; median_cycle_days: number | null; p85_cycle_days: number | null; slip_rate: number | null; }
@@ -21,7 +22,7 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
 
 @Component({
   selector: 'app-delivery-view',
-  imports: [ChartComponent, NgClass, KindChip],
+  imports: [ChartComponent, NgClass, KindChip, BuildSection],
   template: `
   <div class="mb-5 flex flex-wrap items-center gap-2">
     <p class="note mr-auto">How work flows through this project. Export the same numbers to analyse them elsewhere.</p>
@@ -116,7 +117,8 @@ interface Overview { open: number; done: number; tickets: number; cycle: { p50: 
       <div class="grid gap-5 lg:grid-cols-2"><div class="skeleton h-72"></div><div class="skeleton h-72"></div></div>
       <p class="note">Crunching the numbers…</p>
     </div>
-  }`,
+  }
+  <app-build-section />`,
 })
 export class DeliveryView {
   private api = inject(Api);

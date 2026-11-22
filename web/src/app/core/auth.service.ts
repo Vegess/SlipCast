@@ -75,11 +75,26 @@ export class AuthService {
     write(WORKSPACE_KEY, id);
   }
 
-  /** Which "Continue with…" buttons to show. Cached; an unreachable API just shows none. */
+  /**
+   * Which "Continue with…" buttons to show. A free-tier API can take a minute to wake up, so a
+   * failed request is retried a few times and never remembered: the next visit asks again.
+   */
   providers(): Promise<Record<Provider, boolean>> {
-    this.providerCache ??= this.api.get<Record<Provider, boolean>>('/auth/providers')
-      .catch(() => ({ google: false, github: false }));
+    this.providerCache ??= this.fetchProviders().catch(() => {
+      this.providerCache = null;
+      return { google: false, github: false };
+    });
     return this.providerCache;
+  }
+
+  private async fetchProviders(attempt = 0): Promise<Record<Provider, boolean>> {
+    try {
+      return await this.api.get<Record<Provider, boolean>>('/auth/providers');
+    } catch (e) {
+      if (attempt >= 4) throw e;
+      await new Promise((r) => setTimeout(r, 2000 * (attempt + 1)));  // 2, 4, 6, 8 s: about 20 s in all
+      return this.fetchProviders(attempt + 1);
+    }
   }
 
   /** Full-page navigation to the API, which runs the whole Google/GitHub sign-in on its side. */

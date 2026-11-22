@@ -5,6 +5,7 @@ import { Api, errorMessage } from '../../core/api.service';
 import { AuthService } from '../../core/auth.service';
 import { API_URL } from '../../core/config';
 import { prefersReducedMotion } from '../../shared/motion';
+import { GithubConnect } from './github-connect.component';
 import { ProjectContext } from './project.context';
 
 interface Stage { key: string; label: string; category: 'todo' | 'doing' | 'blocked' | 'done'; }
@@ -19,7 +20,7 @@ const CATEGORY = {
 
 @Component({
   selector: 'app-live-view',
-  imports: [FormsModule],
+  imports: [FormsModule, GithubConnect],
   template: `
   <p class="note mb-5">Send stage changes from another system (an order app, a courier feed, a script) and every open
     screen updates within seconds. SlipCast re-runs the forecast and raises an alert when something matters.</p>
@@ -109,6 +110,8 @@ const CATEGORY = {
       </ul>
     </section>
   </div>
+
+  <div class="mt-5"><app-github-connect /></div>
 
   <section class="card card-accent anim-rise mt-5" style="--i: 3">
     <h2 class="section-title">API keys</h2>
