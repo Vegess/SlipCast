@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { CountUpDirective, RevealDirective } from '../../shared/motion';
+import { CountUpDirective, RevealDirective, prefersReducedMotion } from '../../shared/motion';
 import { StoryDiagram } from '../../shared/story-diagram.component';
 
 interface Feature { imgCls?: string; kicker: string; title: string; body: string; points: string[]; img: string; alt: string; edge: string; kickerCls: string; }
@@ -29,7 +29,24 @@ const FEATURES: Feature[] = [
 @Component({
   selector: 'app-landing',
   imports: [RouterLink, RevealDirective, CountUpDirective, StoryDiagram],
+  host: { '(document:keydown)': 'skipIntro()' },
   template: `
+  @if (intro() !== 'off') {
+    <div class="intro" [class.intro-out]="intro() === 'leaving'" (click)="skipIntro()" aria-hidden="true">
+      <div class="intro-glow"></div>
+      <p class="intro-logo">SlipCast</p>
+      <p class="intro-tag">Every promise your business makes, forecast and scored.</p>
+      <p class="intro-line">A feature ships Friday. An order arrives Tuesday. A technician comes Thursday at 2 pm.</p>
+      <svg class="intro-track" viewBox="0 0 240 16" aria-hidden="true">
+        <line x1="8" y1="8" x2="232" y2="8" class="intro-rail"/>
+        <line x1="8" y1="8" x2="232" y2="8" class="intro-run"/>
+        <circle cx="8" cy="8" r="5" class="intro-dot" style="animation-delay: .2s"/>
+        <circle cx="120" cy="8" r="5" class="intro-dot" style="animation-delay: .6s"/>
+        <circle cx="232" cy="8" r="5" class="intro-dot intro-dot-end" style="animation-delay: 1s"/>
+      </svg>
+      <button type="button" class="intro-skip" (click)="skipIntro(); $event.stopPropagation()" tabindex="-1">Skip</button>
+    </div>
+  }
   <div class="overflow-x-hidden">
     <section class="mx-auto grid max-w-6xl items-center gap-10 px-4 pb-16 pt-14 sm:px-8 lg:grid-cols-[1fr_1.1fr] lg:pt-20">
       <div>
@@ -107,22 +124,79 @@ const FEATURES: Feature[] = [
       </section>
     }
 
-    <section class="mx-auto max-w-6xl px-4 pb-20 sm:px-8">
-      <div appReveal class="card card-accent flex flex-col items-start gap-5 p-8 sm:flex-row sm:items-center">
-        <div class="mr-auto">
-          <h2 class="text-2xl font-bold">See your next slip before it happens.</h2>
-          <p class="note mt-1">Every model is tested on work it never saw and compared with a simple baseline. Read how each one works.</p>
+    <section class="mx-auto max-w-6xl px-4 pb-14 sm:px-8">
+      <div appReveal class="endcard relative overflow-hidden rounded-3xl border border-line px-6 py-14 text-center sm:px-12">
+        <div class="anim-drift absolute -inset-10 -z-10 bg-[radial-gradient(circle_at_30%_20%,rgb(var(--c-accent)/0.22),transparent_55%),radial-gradient(circle_at_80%_80%,rgb(var(--c-violet)/0.2),transparent_50%)]" aria-hidden="true"></div>
+        <p class="font-display text-5xl font-extrabold tracking-tight sm:text-6xl">SlipCast</p>
+        <p class="mt-3 font-display text-xl text-accent sm:text-2xl">Every promise, forecast and scored.</p>
+        <p class="mx-auto mt-4 max-w-xl text-muted">See your next slip before it happens. Every model is tested on work it never saw and compared with a simple baseline.</p>
+        <div class="mt-7 flex flex-wrap justify-center gap-3">
+          <a routerLink="/login" [queryParams]="{ demo: 1 }" class="btn btn-primary px-5 py-2.5 text-base">Try the demo</a>
+          <a routerLink="/about" class="btn px-5 py-2.5 text-base">How it works</a>
         </div>
-        <a routerLink="/about" class="btn">How it works</a>
-        <a routerLink="/login" [queryParams]="{ demo: 1 }" class="btn btn-primary">Try the demo</a>
+        <div class="mt-8 flex flex-col items-center gap-1.5 text-base leading-relaxed">
+          <a routerLink="/" class="hover:text-accent">slip-cast.vercel.app</a>
+          <a href="https://github.com/Vegess/SlipCast" target="_blank" rel="noopener" class="inline-flex items-center gap-2 hover:text-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.33-1.28-1.69-1.28-1.69-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z"/></svg>
+            github.com/Vegess/SlipCast</a>
+        </div>
+        <p class="mt-5 text-sm text-muted">Angular · FastAPI · PostgreSQL · scikit-learn · Groq</p>
       </div>
-      <p class="mt-8 text-center text-xs text-muted">SlipCast · open source · Angular, FastAPI, PostgreSQL, scikit-learn ·
+      <p class="mt-8 text-center text-xs text-muted">SlipCast · open source ·
         <a routerLink="/privacy" class="hover:text-fg hover:underline">Privacy</a> ·
         <a routerLink="/terms" class="hover:text-fg hover:underline">Terms</a></p>
     </section>
   </div>`,
+  styles: [`
+    .intro { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 24px; text-align: center; cursor: pointer; color: #E7FBF8;
+      background: radial-gradient(circle at 30% 20%, #123a36, #090D12 60%); animation: intro-in .45s ease-out both; }
+    .intro-out { animation: intro-out .6s ease-in forwards; }
+    .intro-glow { position: absolute; width: 520px; height: 520px; border-radius: 50%; filter: blur(80px); opacity: .35;
+      background: radial-gradient(circle, #2EE6C5, transparent 60%); animation: intro-breathe 2.4s ease-in-out infinite; pointer-events: none; }
+    .intro-logo { position: relative; font: 800 clamp(48px, 9vw, 84px)/1 "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+      letter-spacing: -1px; animation: intro-rise .7s cubic-bezier(.2,.8,.2,1) .1s both; }
+    .intro-tag { position: relative; font: 500 clamp(18px, 3vw, 30px)/1.3 "Bricolage Grotesque", "Instrument Sans", system-ui, sans-serif;
+      color: #2EE6C5; animation: intro-rise .7s cubic-bezier(.2,.8,.2,1) .35s both; }
+    .intro-line { position: relative; max-width: 760px; font: 400 clamp(14px, 1.8vw, 19px)/1.5 "Instrument Sans", system-ui, sans-serif;
+      color: #94A9B6; animation: intro-rise .7s cubic-bezier(.2,.8,.2,1) .6s both; }
+    .intro-track { position: relative; width: 240px; margin-top: 10px; overflow: visible; }
+    .intro-rail { stroke: #223142; stroke-width: 2; }
+    .intro-run { stroke: #2EE6C5; stroke-width: 2; stroke-dasharray: 224; stroke-dashoffset: 224; animation: intro-draw 1.1s ease-out .2s forwards; }
+    .intro-dot { fill: #090D12; stroke: #2EE6C5; stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: intro-pop .4s cubic-bezier(.3,1.6,.5,1) both; }
+    .intro-dot-end { stroke: #B78CFF; }
+    .intro-skip { position: absolute; right: 24px; bottom: 20px; padding: 6px 12px; border-radius: 8px; font-size: 13px; color: #94A9B6;
+      background: rgba(255,255,255,.04); border: 1px solid #223142; }
+    .intro-skip:hover { color: #E7FBF8; }
+    @keyframes intro-in { from { opacity: 0; } }
+    @keyframes intro-out { to { opacity: 0; transform: scale(1.03); visibility: hidden; } }
+    @keyframes intro-rise { from { opacity: 0; transform: translateY(16px); } }
+    @keyframes intro-breathe { 50% { transform: scale(1.12); opacity: .5; } }
+    @keyframes intro-draw { to { stroke-dashoffset: 0; } }
+    @keyframes intro-pop { from { transform: scale(0); } }
+    .endcard { background: rgb(var(--c-panel) / 0.6); }
+  `],
 })
-export class LandingPage {
+export class LandingPage implements OnInit, OnDestroy {
+  /** The title screen from the demo video: once per visit, skippable, never for reduced motion. */
+  readonly intro = signal<'on' | 'leaving' | 'off'>('off');
+  private timers: ReturnType<typeof setTimeout>[] = [];
+
+  ngOnInit() {
+    let seen = false;
+    try { seen = sessionStorage.getItem('slipcast_intro') === '1'; sessionStorage.setItem('slipcast_intro', '1'); } catch { seen = true; }
+    if (seen || prefersReducedMotion()) return;
+    this.intro.set('on');
+    this.timers.push(setTimeout(() => this.skipIntro(), 2600));
+  }
+
+  skipIntro() {
+    if (this.intro() !== 'on') return;
+    this.intro.set('leaving');
+    this.timers.push(setTimeout(() => this.intro.set('off'), 600));
+  }
+
+  ngOnDestroy() { this.timers.forEach(clearTimeout); }
   readonly features = FEATURES;
   readonly modules = [
     { name: 'Build', cls: 'text-info', edge: 'border-t-info', what: 'Software tickets, pull requests and releases.',

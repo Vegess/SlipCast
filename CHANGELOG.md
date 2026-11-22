@@ -6,6 +6,15 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- The landing page leads with the promise pitch, shows the Control Room, proves one result
+  per module against its baseline, and has a "One engine, three modules" section.
+- The landing page opens with the demo video's title screen (once per visit, skippable with
+  a click or any key, never shown when the system asks for reduced motion) and ends with
+  its end card: tagline, live link, GitHub and tech stack.
+- The dashboard uses each project's own words (orders, jobs) and offers one-click demo
+  orders and service visits for modules the workspace hasn't tried.
+
 ## [1.7.0] - 2026-11-22
 
 The Control Room (Phase 4.3, step 4), which completes the four Phase 4 modules.
