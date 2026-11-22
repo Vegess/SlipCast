@@ -42,12 +42,13 @@ def test_software_projects_use_the_four_statuses_as_stages(client, make_user):
     p = _project(client, u)
     r = client.get(f"/api/projects/{p['id']}/stages", headers=u["headers"]).json()
     assert r["template"] == "software"
-    assert [(s["key"], s["category"]) for s in r["stages"]] == [
+    assert [(s["key"], s["category"]) for s in r["stages"]][:4] == [
         ("planned", "todo"),
         ("in_progress", "doing"),
         ("blocked", "blocked"),
         ("done", "done"),
     ]
+    assert {"pr_opened", "pr_merged", "release_tagged", "deployed"} <= {s["key"] for s in r["stages"]}
 
 
 def test_keys_are_shown_once_admin_only_and_revocable(client, make_user):

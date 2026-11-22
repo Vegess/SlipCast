@@ -1,6 +1,9 @@
 def test_demo_project_has_realistic_history(client, demo):
     h, pid = demo["headers"], demo["project_id"]
-    tasks = client.get(f"/api/projects/{pid}/tasks", headers=h).json()
+    tasks = client.get(f"/api/projects/{pid}/tasks", headers=h).json()  # tickets only by default
+    everything = client.get(f"/api/projects/{pid}/tasks", params={"types": "all"}, headers=h).json()
+    assert {t["item_type"] for t in tasks} == {""}
+    assert {t["item_type"] for t in everything} == {"", "pr", "release", "deploy"}
     assert len(tasks) > 400
     statuses = {t["status"] for t in tasks}
     assert statuses >= {"planned", "in_progress", "done"}

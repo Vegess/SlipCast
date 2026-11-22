@@ -6,6 +6,38 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-22
+
+The Build module (Phase 4.3, step 1): pull requests, releases and deployments from GitHub.
+
+### Added
+- **Connect GitHub** on a project's Live feed tab: SlipCast shows a webhook URL and secret
+  with step-by-step instructions. Every delivery is checked against its HMAC signature; the
+  secret is derived from the server secret, so it is never stored, and can be rotated.
+- Pull requests move through opened, in review, approved and merged (or closed); releases are
+  tagged and marked deployed when their first production deployment succeeds; deployments
+  succeed or fail. GitHub's retries change nothing; authors reviewing their own PR don't count.
+- **Delivery tab, "Pull requests and releases":** the four DORA metrics over the last 4 weeks
+  with the change against the 4 before (deployments a week, lead time, failed deployments,
+  recovery time), deployments per week, the wait for a first review, merge time by PR size,
+  and open PRs with the time similar-size PRs took. Without deployments, lead time falls back
+  to opened-to-merged and says so.
+- **Module picker** in the new-project dialog: Build now; Ship and Serve marked as coming.
+- The demo project now includes six months of pull requests, weekly releases and
+  deployments (bigger PRs wait longer, Friday PRs wait over the weekend, about 1 in 9
+  deployments fails and is fixed within hours).
+- `GET /projects/{id}/tasks?types=all` includes pull requests, releases and deployments.
+- Migration 0008.
+
+### Changed
+- Pull requests, releases and deployments are kept out of ticket counts, health checks,
+  forecasts and models, so a PR is never counted as a second ticket.
+- The ticket event code is shared by the event API and the GitHub webhook.
+
+### Fixed
+- The "Continue with Google / GitHub" buttons no longer disappear when the API is still
+  waking up: the page retries for about 20 seconds and doesn't remember a failure.
+
 ## [1.3.0] - 2026-11-21
 
 The real-time engine (Phase 4.2).

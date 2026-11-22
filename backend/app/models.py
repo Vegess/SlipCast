@@ -8,6 +8,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -18,6 +19,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 STATUSES = ("planned", "in_progress", "blocked", "done")
+# Items the Build module tracks alongside tickets. They have their own metrics (review wait,
+# DORA) and are kept out of ticket forecasts, so a pull request isn't counted as a second ticket.
+BUILD_TYPES = ("pr", "release", "deploy")
 PRIORITIES = ("low", "medium", "high")
 KINDS = ("bug", "feature", "tech_debt", "support")
 
@@ -119,6 +123,11 @@ class Project(Base):
     template: Mapped[str] = mapped_column(String(20), default="software", server_default="software")
     # Last 85% completion date seen by the alert check, so a slip of 2+ days can be noticed.
     last_p85: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # GitHub webhook: null = not connected. The secret is derived from the server secret and this
+    # version, so it is never stored; bumping the version rotates it.
+    github_hook_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    github_repo: Mapped[str | None] = mapped_column(String(140), nullable=True)
+    github_last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -292,7 +301,10 @@ class IngestedEvent(Base):
     """One row per accepted event, so sending the same event twice changes nothing."""
 
     __tablename__ = "ingested_events"
-    __table_args__ = (UniqueConstraint("project_id", "external_id", "stage", "occurred_at", name="uq_ingested_event"),)
+    __table_args__ = (
+        UniqueConstraint("project_id", "external_id", "stage", "occurred_at", name="uq_ingested_event"),
+        Index("ix_ingested_events_external_id", "project_id", "external_id"),
+    )
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"), index=True)

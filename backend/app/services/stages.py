@@ -19,6 +19,15 @@ DEFAULTS: dict[str, list[tuple[str, str, str]]] = {
         ("in_progress", "In progress", "doing"),
         ("blocked", "Blocked", "blocked"),
         ("done", "Done", "done"),
+        # Pull requests and releases, usually from the GitHub webhook (Build module).
+        ("pr_opened", "PR opened", "doing"),
+        ("pr_in_review", "PR in review", "doing"),
+        ("pr_approved", "PR approved", "doing"),
+        ("pr_merged", "PR merged", "done"),
+        ("pr_closed", "PR closed without merging", "done"),
+        ("release_tagged", "Release tagged", "doing"),
+        ("deploy_failed", "Deploy failed", "blocked"),
+        ("deployed", "Deployed", "done"),
     ],
     "shipments": [
         ("ordered", "Ordered", "todo"),

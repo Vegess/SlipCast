@@ -16,7 +16,7 @@ import pandas as pd
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Task, TaskEvent
+from app.models import BUILD_TYPES, Task, TaskEvent
 from app.services import flow, forecast, ledger, nlp, reference_class, risk_model
 from app.timeutil import naive_utc, now_utc
 
@@ -310,13 +310,14 @@ def _cache_key(db: Session, project_id: str, today: date) -> tuple:
 
 def load(db: Session, project_id: str, now: datetime) -> Analysis:
     cols = [getattr(Task, c) for c in TICKET_COLUMNS]
-    task_rows = [tuple(r) for r in db.execute(select(*cols).where(Task.project_id == project_id)).all()]
+    tickets_only = (Task.project_id == project_id) & Task.item_type.notin_(BUILD_TYPES)
+    task_rows = [tuple(r) for r in db.execute(select(*cols).where(tickets_only)).all()]
     event_rows = [
         tuple(r)
         for r in db.execute(
             select(TaskEvent.task_id, TaskEvent.from_status, TaskEvent.to_status, TaskEvent.at)
             .join(Task, Task.id == TaskEvent.task_id)
-            .where(Task.project_id == project_id)
+            .where(tickets_only)
         ).all()
     ]
     tickets, events = build_frames(task_rows, event_rows)

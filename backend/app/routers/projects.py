@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, require_membership
-from app.models import ImportRecord, Project, Task, User
+from app.models import BUILD_TYPES, ImportRecord, Project, Task, User
 from app.schemas import InsightsOut, ProjectIn, ProjectOut, ProjectUpdate
 from app.services import insights
 
@@ -24,7 +24,7 @@ def _counts(db: Session, project_ids: list[str]) -> dict[str, tuple[int, int]]:
             func.count(Task.id),
             func.sum(case((Task.status == "done", 1), else_=0)),
         )
-        .where(Task.project_id.in_(project_ids))
+        .where(Task.project_id.in_(project_ids), Task.item_type.notin_(BUILD_TYPES))
         .group_by(Task.project_id)
     ).all()
     return {pid: (total, int(done or 0)) for pid, total, done in rows}
@@ -114,7 +114,7 @@ def project_insights(
 ) -> InsightsOut:
     """Rule-based health checks: overdue, blocked, unowned and overloaded work."""
     project = get_project_for_user(db, user, project_id)
-    tasks = db.scalars(select(Task).where(Task.project_id == project.id)).all()
+    tasks = db.scalars(select(Task).where(Task.project_id == project.id, Task.item_type.notin_(BUILD_TYPES))).all()
     views = [insights.TaskView(t.id, t.title, t.owner, t.status, t.priority, t.due) for t in tasks]
     result = insights.analyse(views, date.today())
     return InsightsOut(

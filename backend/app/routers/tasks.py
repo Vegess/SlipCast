@@ -1,10 +1,12 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
-from app.models import Task, TaskEvent, User
+from app.models import BUILD_TYPES, Task, TaskEvent, User
 from app.schemas import TaskIn, TaskOut, TaskUpdate
 from app.services import ledger
 from app.services.analysis import get_analysis
@@ -45,9 +47,18 @@ def notify(project_id: str, task_ids: list[str], deleted: bool = False, source: 
 
 
 @router.get("/projects/{project_id}/tasks", response_model=list[TaskOut])
-def list_tasks(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[Task]:
+def list_tasks(
+    project_id: str,
+    types: Literal["tickets", "all"] = "tickets",
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> list[Task]:
+    """Tickets by default; `types=all` adds the pull requests, releases and deployments from GitHub."""
     project = get_project_for_user(db, user, project_id)
-    return list(db.scalars(select(Task).where(Task.project_id == project.id).order_by(Task.position, Task.created_at)))
+    query = select(Task).where(Task.project_id == project.id)
+    if types == "tickets":
+        query = query.where(Task.item_type.notin_(BUILD_TYPES))
+    return list(db.scalars(query.order_by(Task.position, Task.created_at)))
 
 
 @router.post("/projects/{project_id}/tasks", response_model=TaskOut, status_code=status.HTTP_201_CREATED)

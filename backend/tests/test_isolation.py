@@ -79,6 +79,24 @@ def test_cross_tenant_access_is_denied(client, make_user):
     assert client.post(f"/api/projects/{pid}/stream-token", headers=bh).status_code == 404
     assert client.get(f"/api/projects/{pid}/alerts", headers=bh).status_code == 404
     assert client.get(f"/api/workspaces/{ws}/alerts", headers=bh).status_code == 404
+    # Build module
+    assert client.get(f"/api/projects/{pid}/github", headers=bh).status_code == 404
+    assert client.post(f"/api/projects/{pid}/github", headers=bh).status_code == 404
+    assert client.delete(f"/api/projects/{pid}/github", headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{pid}/analytics/build", headers=bh).status_code == 404
+    assert client.get(f"/api/projects/{pid}/tasks", params={"types": "all"}, headers=bh).status_code == 404
+    bob_project = client.post(f"/api/workspaces/{bob['workspace_id']}/projects", json={"name": "B"}, headers=bh).json()
+    bob_secret = client.post(f"/api/projects/{bob_project['id']}/github", headers=bh).json()["secret"]
+    import hashlib
+    import hmac
+
+    body = b'{"zen": "x"}'
+    sig = "sha256=" + hmac.new(bob_secret.encode(), body, hashlib.sha256).hexdigest()
+    hook = f"/api/projects/{pid}/github/webhook"  # Bob's valid signature, Alice's project
+    assert (
+        client.post(hook, content=body, headers={"X-GitHub-Event": "ping", "X-Hub-Signature-256": sig}).status_code
+        == 401
+    )
     # an invite id from Bob's workspace can't be used to delete through Alice's, or vice versa
     assert (
         client.delete(f"/api/workspaces/{ws}/invites/{bob_invite['id']}", headers=alice["headers"]).status_code == 404

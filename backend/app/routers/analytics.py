@@ -7,8 +7,9 @@ from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
 from app.models import User
 from app.schemas import DraftIn
-from app.services import export, ledger
+from app.services import build_metrics, export, ledger
 from app.services.analysis import get_analysis
+from app.timeutil import now_utc
 
 router = APIRouter(tags=["analytics"])
 
@@ -102,6 +103,13 @@ def evaluation(project_id: str, user: User = Depends(get_current_user), db: Sess
     from app.routers.advice import advice_stats
 
     return {**analysis.evaluation, "ledger": ledger_summary, "advice": advice_stats(db, project.id)}
+
+
+@router.get("/projects/{project_id}/analytics/build")
+def build_analytics(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Pull requests, releases and deployments: review wait, size classes and DORA metrics."""
+    project = get_project_for_user(db, user, project_id)
+    return build_metrics.compute(db, project.id, now_utc())
 
 
 @router.get("/tasks/{task_id}/analysis")

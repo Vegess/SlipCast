@@ -372,7 +372,7 @@ Each module ships with: stages, fields, a deterministic demo dataset of 300 to 5
 promises, wording, its breakdowns, and a "small data" test. Show the module picker in
 the new-project dialog, with one sentence explaining each.
 
-1. **Build (v1.4):** pull requests and releases from GitHub via a repository webhook
+1. **Build (v1.4, done):** pull requests and releases from GitHub via a repository webhook
    (signature verified with the webhook secret). PR stages: opened, in review, approved,
    merged. Release stages: tagged, deployed. Adds review wait time, PR-size reference
    classes, and the four DORA metrics on the Delivery tab.
