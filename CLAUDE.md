@@ -388,7 +388,7 @@ the new-project dialog, with one sentence explaining each.
    appointment window, duration estimate. Predicts the risk of a missed or rescheduled
    visit and the real job duration ("jobs like this took 1.5–3 hours"); breakdowns by
    technician, area and service type; technician load like owner load in Build.
-4. **Control Room (v1.7):** one animated, live page across all of a workspace's projects:
+4. **Control Room (v1.7, done):** one animated, live page across all of a workspace's projects:
    every promise due in the next 7 days, at-risk ones first, a live event feed, forecast
    slips as toasts, and the ledger's hit rate per module. Uses the motion system from
    v1.1.0 (`shared/motion.ts`, `styles.css`) and adds a third theme, **Neon** (teal and
