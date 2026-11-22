@@ -73,6 +73,17 @@ order, an **order check** shows how long orders like it took, how many would hav
 promised date, and which carrier is most reliable on that route. To watch it live, run
 `python scripts/simulate_orders.py --project <id> --key <API key>`.
 
+### Visits, technicians and job lengths (Serve module)
+Pick **Serve** for service jobs: booked, scheduled, assigned, en route, on site and done,
+plus rescheduled and cancelled. A visit counts as missed when the technician arrives after
+the appointment window or the job is rescheduled. The Delivery tab shows on-time arrivals,
+real job length against the hours booked by service and technician, how missed visits climb
+on busy days, technicians' load for the next 7 days, areas, and upcoming visits likely to be
+missed with their reasons ("Manoj missed 26% in the last 6 weeks · Booked as 1 h; Electrical
+fault jobs by Manoj took 1.3–1.9 h"). While booking, a **job check** shows how long jobs like
+it took, the chance the visit is missed, and who else does that service and how busy they are
+that day.
+
 ### Live updates and alerts
 Other systems can send stage changes to a project through the event API with a project key.
 Every open screen refreshes within about a second, changed cards glow, and a bell and toasts
@@ -165,6 +176,16 @@ was placed.
 | Delivery-time reference class (route, carrier, service) | P10–P90 coverage | 0.69 | 0.80 | target (ranges are a little narrow) |
 | | P50 error (days) | **1.23** | 1.65 | the usual delivery time of all earlier orders |
 | Late-delivery risk (route and recent carrier late rates) | ROC-AUC | **0.87** | 0.85 | the carrier's late rate alone |
+
+**Serve module**, on the demo jobs (482 simulated jobs over eleven weeks, measured on
+22 November 2026). Each of the newest 30% of visits is judged only from visits finished at
+least 12 hours before its window.
+
+| Model | Metric | SlipCast | Baseline | Baseline is |
+|---|---|---|---|---|
+| Missed-visit risk (technician's last 6 weeks, day load, time of day) | ROC-AUC | **0.76** | 0.62 | the technician's miss rate alone |
+| Job-length reference class (service and technician) | Mean error (hours) | **0.38** | 0.49 | the hours booked |
+| | P10–P90 coverage | 0.71 | 0.80 | target (ranges are a little narrow) |
 
 The demo data is synthetic, so these numbers show the methods work rather than promise the
 same accuracy everywhere. That is exactly why the forecast ledger exists: it measures accuracy
@@ -288,7 +309,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 127 tests
+pytest                                   # 132 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -310,10 +331,11 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | GET, POST, DELETE | `/projects/{id}/github`; POST `/projects/{id}/github/webhook` | Connect a GitHub repository; signed webhook deliveries |
 | GET | `/projects/{id}/analytics/build` | Review wait, merge time by PR size, DORA metrics |
 | GET | `/projects/{id}/analytics/ship`; POST `/projects/{id}/ship/estimate` | On-time rate by carrier and route, stage waits, orders likely to be late; write-time order estimate |
+| GET | `/projects/{id}/analytics/serve`; POST `/projects/{id}/serve/estimate` | Missed visits, job length vs booked, technician load, visits likely to be missed; booking check |
 | GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |
-| POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project?template=software\|shipments` | CSV import with quality report; demo project per module |
+| POST | `/workspaces/{id}/import`, `/workspaces/{id}/demo-project?template=software\|shipments\|services` | CSV import with quality report; demo project per module |
 | GET | `/workspaces/{id}/imports`, `/imports/{id}` | Past imports and their data-quality reports |
 | GET, PATCH, DELETE | `/projects/{id}`; GET `/projects/{id}/insights` | Project and rule-based health |
 | GET, POST | `/projects/{id}/tasks`; PATCH, DELETE `/tasks/{id}` | Tickets (status changes are recorded) |
