@@ -313,3 +313,102 @@ def generate(today: datetime, n: int = 420, days: int = 182, seed: int = 42) -> 
         )
     tickets.sort(key=lambda t: t["created_at"])
     return tickets
+
+
+# ---------------------------------------------------------------------------------------
+# Build module: pull requests, releases and deployments for the same team.
+# Patterns to find: big PRs wait longer for review and take longer to merge; Friday PRs
+# wait over the weekend; about 1 in 9 deployments fails and is fixed within hours.
+# ---------------------------------------------------------------------------------------
+
+PR_VERBS = ["Add", "Fix", "Refactor", "Speed up", "Clean up", "Handle", "Update", "Remove"]
+
+
+def _size_label(lines: int) -> str:
+    for limit, label in ((10, "XS"), (100, "S"), (400, "M"), (1000, "L")):
+        if lines < limit:
+            return label
+    return "XL"
+
+
+def generate_build(today: datetime, days: int = 182, seed: int = 7) -> list[dict]:
+    """Deterministic PRs, weekly releases and production deployments, as stage events."""
+    r = random.Random(seed)
+    rng = np.random.default_rng(seed)
+    start = today - timedelta(days=days)
+    repo = "atlas/billing"
+    items: list[dict] = []
+
+    topics = list(TOPICS)
+    for n in range(1, 400):
+        opened = start + timedelta(hours=float(rng.uniform(0, days * 24)))
+        if opened.weekday() >= 5 and r.random() < 0.7:
+            continue  # few PRs at weekends
+        topic = r.choice(topics)
+        comp = r.choice(TOPICS[topic]["comps"])
+        lines = int(np.clip(rng.lognormal(np.log(110), 1.15), 1, 4000))
+        author = r.choice(TEAM)
+        wait = float(rng.gamma(2.0, 3.5)) * (1 + lines / 500)
+        if opened.weekday() == 4:
+            wait += 40  # Friday: waits until Monday
+        reviewed = opened + timedelta(hours=wait)
+        changes = r.random() < 0.3
+        approved = reviewed + timedelta(hours=float(rng.gamma(2.0, 4.0)) * (1 + lines / 900)) if changes else reviewed
+        merged = approved + timedelta(hours=float(rng.gamma(1.5, 2.0)))
+        events = [("pr_opened", opened)]
+        if changes:
+            events.append(("pr_in_review", reviewed))
+        events.append(("pr_approved", approved))
+        events.append(("pr_closed", merged) if r.random() < 0.05 else ("pr_merged", merged))
+        events = [(s, at) for s, at in events if at <= today]
+        additions = int(lines * r.uniform(0.55, 0.9))
+        items.append({
+            "external_id": f"pr:{repo}#{n}",
+            "item_type": "pr",
+            "title": f"{r.choice(PR_VERBS)} {comp}"[:140],
+            "owner": author,
+            "attributes": {
+                "number": n, "repo": repo, "author": author, "url": f"https://github.com/{repo}/pull/{n}",
+                "additions": additions, "deletions": lines - additions, "changed_files": max(1, lines // 40),
+                "size": _size_label(lines),
+            },
+            "events": events,
+        })  # fmt: skip
+
+    deploy_id = 1000
+    for week in range(days // 7 + 1):
+        tuesday = start + timedelta(days=week * 7 + (1 - start.weekday()) % 7, hours=11)
+        tag = f"v2.{week}.0"
+        if tuesday <= today:
+            items.append({
+                "external_id": f"release:{repo}#{tag}", "item_type": "release", "title": f"Release {tag}", "owner": "",
+                "attributes": {"tag": tag, "repo": repo}, "events": [("release_tagged", tuesday)],
+            })  # fmt: skip
+        for k in range(r.choice([2, 3, 3, 4])):
+            at = tuesday + timedelta(days=k * 1.6, hours=float(rng.uniform(0, 5)))
+            if at > today:
+                break
+            deploy_id += 1
+            ref = tag if k == 0 else f"main@{deploy_id}"
+            # ~1 in 9 fail, plus two recent ones so the demo always shows failure and recovery
+            failed = r.random() < 0.11 or (k == 1 and week in (days // 7 - 1, days // 7 - 5))
+            items.append(_deploy(repo, deploy_id, ref, at, failed))
+            if failed:  # the fix goes out a few hours later
+                deploy_id += 1
+                fix = at + timedelta(hours=float(rng.gamma(1.6, 2.5)))
+                if fix <= today:
+                    items.append(_deploy(repo, deploy_id, ref, fix, False))
+            elif k == 0:
+                items[-1]["release_deployed"] = (f"release:{repo}#{tag}", at)
+    return items
+
+
+def _deploy(repo: str, deploy_id: int, ref: str, at: datetime, failed: bool) -> dict:
+    return {
+        "external_id": f"deploy:{repo}#{deploy_id}",
+        "item_type": "deploy",
+        "title": f"Deploy {ref} to production",
+        "owner": "",
+        "attributes": {"environment": "production", "ref": ref, "repo": repo, "production": True},
+        "events": [("deploy_failed" if failed else "deployed", at)],
+    }

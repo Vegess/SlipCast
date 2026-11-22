@@ -4,9 +4,10 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.deps import get_current_user, get_import_for_user, require_membership
-from app.models import ImportRecord, Project, Task, TaskEvent, User
+from app.models import ImportRecord, IngestedEvent, Project, Task, TaskEvent, User
 from app.routers.projects import _counts, _out, next_color
 from app.services import analysis, demo_data, importer, ledger
+from app.services.stages import stages_for, status_for
 from app.timeutil import naive_utc, now_utc
 
 router = APIRouter(tags=["data"])
@@ -37,6 +38,43 @@ def _save(db: Session, project: Project, rows: list[dict], events_of) -> None:
             db.add(TaskEvent(task=task, from_status=frm, to_status=to, at=at))
 
 
+def _save_build(db: Session, project: Project, rows: list[dict], start_position: int) -> None:
+    """Demo pull requests, releases and deployments, stored exactly as webhook events would be."""
+    stages = stages_for(db, project)
+    by_id = {row["external_id"]: row for row in rows}
+    for row in rows:  # a release counts as deployed when its first production deploy succeeds
+        if "release_deployed" in row:
+            ext, at = row["release_deployed"]
+            if ext in by_id:
+                by_id[ext]["events"].append(("deployed", at))
+    for i, row in enumerate(rows):
+        events = sorted(row["events"], key=lambda e: e[1])
+        if not events:
+            continue
+        statuses = [status_for(stages, st) for st, _ in events]
+        task = Task(
+            project_id=project.id,
+            position=start_position + i,
+            title=row["title"],
+            owner=row["owner"],
+            status=statuses[-1],
+            stage=events[-1][0],
+            item_type=row["item_type"],
+            attributes=row["attributes"],
+            external_id=row["external_id"],
+            created_at=events[0][1],
+            started_at=events[0][1],
+            completed_at=events[-1][1] if statuses[-1] == "done" else None,
+        )
+        db.add(task)
+        previous = None
+        for (st, at), status_ in zip(events, statuses, strict=True):
+            db.add(IngestedEvent(project_id=project.id, external_id=row["external_id"], stage=st, occurred_at=at))
+            if status_ != previous:
+                db.add(TaskEvent(task=task, from_status=previous, to_status=status_, at=at))
+                previous = status_
+
+
 @router.post("/workspaces/{workspace_id}/demo-project", status_code=status.HTTP_201_CREATED)
 def create_demo_project(
     workspace_id: str,
@@ -64,6 +102,7 @@ def create_demo_project(
     now = naive_utc(now_utc())
     rows = demo_data.generate(now)
     _save(db, project, rows, lambda r: r["events"])
+    _save_build(db, project, demo_data.generate_build(now), len(rows))
     db.flush()
     # Replay history so the demo's forecast ledger shows a real track record.
     ledger.backfill(db, analysis.load(db, project.id, now))
