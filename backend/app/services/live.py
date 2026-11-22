@@ -15,8 +15,9 @@ class Broker:
         self._subs: dict[str, set[tuple[asyncio.AbstractEventLoop, asyncio.Queue]]] = defaultdict(set)
         self._lock = threading.Lock()
 
-    def subscribe(self, project_id: str) -> asyncio.Queue:
-        queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+    def subscribe(self, project_id: str, queue: asyncio.Queue | None = None) -> asyncio.Queue:
+        """Pass the same queue for several projects to hear all of them (the Control Room does)."""
+        queue = queue or asyncio.Queue(maxsize=100)
         with self._lock:
             self._subs[project_id].add((asyncio.get_running_loop(), queue))
         return queue
@@ -34,6 +35,7 @@ class Broker:
     def publish(self, project_id: str, message: dict) -> None:
         with self._lock:
             targets = list(self._subs.get(project_id, ()))
+        message = {**message, "project_id": project_id}
         for loop, queue in targets:
             try:
                 loop.call_soon_threadsafe(_offer, queue, message)
