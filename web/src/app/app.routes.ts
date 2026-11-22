@@ -13,7 +13,7 @@ export const routes: Routes = [
     path: '',
     loadComponent: () => import('./features/layout/app-layout.component').then((m) => m.AppLayoutComponent),
     children: [
-      { path: '', pathMatch: 'full', canActivate: [landingGuard], title: 'SlipCast · Know when work will really ship',
+      { path: '', pathMatch: 'full', canActivate: [landingGuard], title: 'SlipCast · Every promise, forecast and scored',
         loadComponent: () => import('./features/landing/landing.page').then((m) => m.LandingPage) },
       { path: 'about', title: 'How SlipCast works',
         loadComponent: () => import('./features/about/about.page').then((m) => m.AboutPage) },
