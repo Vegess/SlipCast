@@ -4,7 +4,7 @@ import { BarChart, HeatmapChart, LineChart, ScatterChart } from 'echarts/charts'
 import { GridComponent, LegendComponent, MarkLineComponent, TooltipComponent, VisualMapComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
-import { DUSK, LIGHT, ThemeService, toLight } from '../core/theme.service';
+import { DUSK, PALETTES, ThemeService, forTheme } from '../core/theme.service';
 import { prefersReducedMotion } from './motion';
 
 echarts.use([BarChart, HeatmapChart, LineChart, ScatterChart, GridComponent, LegendComponent, MarkLineComponent,
@@ -13,7 +13,7 @@ echarts.use([BarChart, HeatmapChart, LineChart, ScatterChart, GridComponent, Leg
 export const PALETTE = [DUSK.info, DUSK.ok, DUSK.accent, DUSK.violet, DUSK.bad, DUSK.sky];
 
 /** One ECharts theme per app theme; option colours are written in Dusk and remapped for light. */
-for (const [name, c] of [['dusk', DUSK], ['light', LIGHT]] as const) {
+for (const [name, c] of Object.entries(PALETTES)) {
   echarts.registerTheme(`slipcast-${name}`, {
     color: [c.info, c.ok, c.accent, c.violet, c.bad, c.sky],
     backgroundColor: 'transparent',
@@ -87,6 +87,6 @@ export class ChartComponent {
       this.drawnTheme = theme;
     }
     const opts = { ...chartMotion(), ...this.options() };
-    this.chart.setOption(theme === 'light' ? toLight(opts) : opts, true);
+    this.chart.setOption(forTheme(opts, theme), true);
   }
 }

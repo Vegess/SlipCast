@@ -1,12 +1,12 @@
 import { Injectable, signal } from '@angular/core';
 
-export type Theme = 'dusk' | 'light';
+export type Theme = 'dusk' | 'light' | 'neon';
 const KEY = 'slipcast_theme';
 
 /**
  * Colours used inside charts (ECharts draws on canvas, so it can't read CSS variables).
  * Keep in sync with the palettes in tailwind.config.js. Charts are written with the Dusk
- * values; ChartComponent swaps them for the light equivalents when the light theme is on.
+ * values; ChartComponent swaps them for the Light or Neon equivalents when those themes are on.
  */
 export const DUSK = {
   canvas: '#172033', panel: '#1F2A40', raised: '#28354F', line: '#34425E', grid: '#2A3650', dim: '#46546F',
@@ -18,20 +18,37 @@ export const LIGHT: Record<keyof typeof DUSK, string> = {
   fg: '#18202F', muted: '#566279', accent: '#C27C0E', info: '#2459D6', ok: '#0E9470', bad: '#D2403F',
   violet: '#6D3FD9', sky: '#1F8BC4',
 };
-const TO_LIGHT = new Map(Object.entries(DUSK).map(([k, v]) => [v.toUpperCase(), LIGHT[k as keyof typeof DUSK]]));
+export const NEON: Record<keyof typeof DUSK, string> = {
+  canvas: '#090D12', panel: '#0F151D', raised: '#16202B', line: '#223142', grid: '#18232F', dim: '#2E4054',
+  fg: '#E7FBF8', muted: '#94A9B6', accent: '#2EE6C5', info: '#5CC8FF', ok: '#4BE38A', bad: '#FF6B8E',
+  violet: '#B78CFF', sky: '#5CC8FF',
+};
+export const PALETTES: Record<Theme, Record<keyof typeof DUSK, string>> = { dusk: DUSK, light: LIGHT, neon: NEON };
+const swap = (to: Record<keyof typeof DUSK, string>) =>
+  new Map(Object.entries(DUSK).map(([k, v]) => [v.toUpperCase(), to[k as keyof typeof DUSK]]));
+const SWAPS: Record<Theme, Map<string, string> | null> = { dusk: null, light: swap(LIGHT), neon: swap(NEON) };
 
 /** Replaces Dusk colours anywhere in an ECharts option object (strings only, recursively). */
-export function toLight<T>(value: T): T {
-  if (typeof value === 'string') return (TO_LIGHT.get(value.toUpperCase()) ?? value) as T;
-  if (Array.isArray(value)) return value.map(toLight) as T;
-  if (value && typeof value === 'object' && Object.getPrototypeOf(value) === Object.prototype) {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, toLight(v)])) as T;
-  }
-  return value;
+export function forTheme<T>(value: T, theme: Theme): T {
+  const map = SWAPS[theme];
+  if (!map) return value;
+  const walk = (v: unknown): unknown => {
+    if (typeof v === 'string') return map.get(v.toUpperCase()) ?? v;
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
+      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    }
+    return v;
+  };
+  return walk(value) as T;
 }
+export function toLight<T>(value: T): T { return forTheme(value, 'light'); }
 
 export function readTheme(): Theme {
-  try { return localStorage.getItem(KEY) === 'light' ? 'light' : 'dusk'; } catch { return 'dusk'; }
+  try {
+    const t = localStorage.getItem(KEY);
+    return t === 'light' || t === 'neon' ? t : 'dusk';
+  } catch { return 'dusk'; }
 }
 
 @Injectable({ providedIn: 'root' })
@@ -48,6 +65,6 @@ export class ThemeService {
 
   private apply(theme: Theme) {
     document.documentElement.dataset['theme'] = theme;
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? LIGHT.canvas : DUSK.canvas);
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', PALETTES[theme].canvas);
   }
 }

@@ -2,8 +2,8 @@
 const plugin = require("tailwindcss/plugin");
 
 /**
- * Two themes. "dusk" (default) is a soft, colourful dark theme; "light" is its daytime
- * counterpart. Every colour pair used for text meets WCAG AA (4.5:1) on canvas, panel and
+ * Three themes. "dusk" (default) is a soft, colourful dark theme; "light" is its daytime
+ * counterpart; "neon" is teal and violet on near-black, made for the Control Room. Every colour pair used for text meets WCAG AA (4.5:1) on canvas, panel and
  * raised. The *-strong tones are for text on tinted chips (e.g. bg-bad/15), where the base
  * colour alone would fall below 4.5:1.
  */
@@ -50,6 +50,27 @@ const palettes = {
     "bad-strong": "#9E2020",
     "violet-strong": "#5530B0",
   },
+  neon: {
+    canvas: "#090D12",
+    panel: "#0F151D",
+    "panel-tint": "#0C1A1F",
+    raised: "#16202B",
+    line: "#223142",
+    grid: "#18232F",
+    fg: "#E7FBF8",
+    muted: "#94A9B6",
+    accent: "#2EE6C5",
+    "accent-ink": "#032019",
+    info: "#5CC8FF",
+    ok: "#4BE38A",
+    bad: "#FF6B8E",
+    violet: "#B78CFF",
+    "accent-strong": "#9AF5E4",
+    "info-strong": "#B5E6FF",
+    "ok-strong": "#A6F2C4",
+    "bad-strong": "#FFB9CA",
+    "violet-strong": "#DCC8FF",
+  },
 };
 
 const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(" ");
@@ -73,6 +94,7 @@ module.exports = {
       addBase({
         ":root": { ...vars(palettes.dusk), colorScheme: "dark" },
         ':root[data-theme="light"]': { ...vars(palettes.light), colorScheme: "light" },
+        ':root[data-theme="neon"]': { ...vars(palettes.neon), colorScheme: "dark" },
       });
     }),
   ],

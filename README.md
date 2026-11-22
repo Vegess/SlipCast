@@ -56,6 +56,20 @@ pages share a top navigation bar that collapses to a menu on mobile; every page 
 |---|---|---|
 | ![Landing page](docs/screenshots/landing.png) | ![Dashboard](docs/screenshots/dashboard.png) | ![Imports](docs/screenshots/imports.png) |
 
+### Control Room
+One live page across every project in the workspace: each promise due in the next 7 days,
+riskiest first, whatever the module. Each risk comes from that project's own model (slip risk
+for tickets, late-delivery risk for orders, missed-visit risk for jobs), so it matches the
+project's screens. A 7-day timeline shows every promise as a dot on its due day, with
+high-risk ones pulsing. Each module's track record from the forecast ledger is drawn as a
+ring, a live feed slides in stage changes from every project, and forecast slips and new
+high-risk promises pop up as toasts. It opens in any theme and offers **Neon**, a teal and
+violet theme on near-black made for a big screen.
+
+| Neon | Light |
+|---|---|
+| ![Control Room, Neon](docs/screenshots/control-room-neon.png) | ![Control Room, Light](docs/screenshots/control-room-light.png) |
+
 ### Pull requests, releases and DORA (Build module)
 Connect a GitHub repository with a webhook and the Delivery tab adds the four DORA metrics
 (deployments a week, lead time, failed deployments, recovery time), how long pull requests
@@ -137,8 +151,9 @@ and the forecast ledger.
 | ![Board](docs/screenshots/board.png) | ![Import report](docs/screenshots/import.png) | ![Sign in](docs/screenshots/sign-in.png) |
 
 ### Themes
-A soft, colourful **Dusk** dark theme by default and a **Light** theme, switchable in the
-sidebar and remembered per browser. Text meets WCAG AA contrast (4.5:1) in both. Cards carry a
+A soft, colourful **Dusk** dark theme by default, a **Light** theme, and **Neon** (teal and
+violet on near-black), switchable in the sidebar and remembered per browser. Text meets WCAG AA
+contrast (4.5:1) in all three. Cards carry a
 thin colour edge by kind (blue for analytics, violet for AI and models, amber for forecasts),
 and ticket types have colour chips.
 
@@ -309,7 +324,7 @@ environments store absolute paths.
 
 ```bash
 cd backend
-pytest                                   # 132 tests
+pytest                                   # 136 tests
 ruff check . && ruff format --check .
 alembic upgrade head && alembic check    # migrations match the models
 ```
@@ -332,6 +347,8 @@ All paths are under `/api`. Every project and ticket endpoint is tenant-scoped.
 | GET | `/projects/{id}/analytics/build` | Review wait, merge time by PR size, DORA metrics |
 | GET | `/projects/{id}/analytics/ship`; POST `/projects/{id}/ship/estimate` | On-time rate by carrier and route, stage waits, orders likely to be late; write-time order estimate |
 | GET | `/projects/{id}/analytics/serve`; POST `/projects/{id}/serve/estimate` | Missed visits, job length vs booked, technician load, visits likely to be missed; booking check |
+| GET | `/workspaces/{id}/control-room` | Promises due in the next 7 days across all projects, riskiest first; each module's track record; latest activity |
+| POST, GET | `/workspaces/{id}/stream-token`, `/workspaces/{id}/stream` | Live updates from every project in the workspace (Server-Sent Events) |
 | GET, POST, DELETE | `/workspaces/{id}/invites[/{id}]`; GET `/invites/{token}`, POST `/invites/{token}/accept` | Single-use invite links |
 | GET | `/auth/ai-status` | Whether advice uses Groq or built-in rules (never the key) |
 | GET, POST | `/workspaces/{id}/projects` | List or create projects |

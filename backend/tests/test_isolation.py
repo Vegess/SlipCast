@@ -46,6 +46,9 @@ def test_cross_tenant_access_is_denied(client, make_user):
     assert client.post(f"/api/projects/{p['id']}/reference-class", json={"title": "x"}, headers=bh).status_code == 404
     assert client.post(f"/api/projects/{p['id']}/ticket-check", json={"title": "x"}, headers=bh).status_code == 404
     assert client.post(f"/api/workspaces/{alice['workspace_id']}/demo-project", headers=bh).status_code == 404
+    # Control Room
+    assert client.get(f"/api/workspaces/{alice['workspace_id']}/control-room", headers=bh).status_code == 404
+    assert client.post(f"/api/workspaces/{alice['workspace_id']}/stream-token", headers=bh).status_code == 404
     assert (
         client.post(
             f"/api/workspaces/{alice['workspace_id']}/import",

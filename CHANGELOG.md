@@ -6,6 +6,26 @@ All notable changes to SlipCast are recorded here. The format follows
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-11-22
+
+The Control Room (Phase 4.3, step 4), which completes the four Phase 4 modules.
+
+### Added
+- **Control Room** (top navigation): every promise due in the next 7 days across all of a
+  workspace's projects, riskiest first, with filters for Build, Ship and Serve. Each risk is
+  the project's own model (slip risk, late-delivery risk, missed-visit risk), so it matches
+  the project's screens; overdue tickets count as certain to slip.
+- A 7-day timeline with every promise as a dot on its due day, coloured by risk, with
+  high-risk ones pulsing and a column for what's already overdue.
+- Each module's track record from the forecast ledger, drawn as an animated ring, plus a
+  card per project (open, due this week, high risk, 85% forecast date, track record).
+- A live feed of stage changes from every project; new entries slide in. Forecast slips and
+  new high-risk promises appear as toasts.
+- One live stream for the whole workspace: `POST /workspaces/{id}/stream-token` and
+  `GET /workspaces/{id}/stream`. Every live message now names its project.
+- `GET /workspaces/{id}/control-room`.
+- **Neon theme:** teal and violet on near-black, next to Dusk and Light, including charts.
+
 ## [1.6.0] - 2026-11-22
 
 The Serve module (Phase 4.3, step 3): service jobs and appointments.

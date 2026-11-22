@@ -83,7 +83,7 @@ export class ShellComponent implements OnInit {
   readonly auth = inject(AuthService);
   readonly store = inject(WorkspaceStore);
   readonly theme = inject(ThemeService);
-  readonly themes = [['dusk', 'Dusk'], ['light', 'Light']] as const;
+  readonly themes = [['dusk', 'Dusk'], ['light', 'Light'], ['neon', 'Neon']] as const;
   private api = inject(Api);
   private router = inject(Router);
   readonly dialog = signal<'import' | 'project' | null>(null);

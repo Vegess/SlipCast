@@ -72,6 +72,7 @@ export class AppLayoutComponent implements OnInit {
   readonly menu = signal(false);
   readonly links = [
     { path: '/dashboard', label: 'Dashboard' },
+    { path: '/control-room', label: 'Control Room' },
     { path: '/projects', label: 'Projects' },
     { path: '/imports', label: 'Imports' },
     { path: '/settings', label: 'Settings' },

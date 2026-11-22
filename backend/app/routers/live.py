@@ -17,6 +17,7 @@ from app.deps import get_current_user, get_project_for_user, require_membership
 from app.models import Alert, Project, ProjectApiKey, User
 from app.security import create_signed, read_signed
 from app.services import alerts as alert_rules
+from app.services import control_room
 from app.services.ingest import EventBatch, EventIn, apply_events
 from app.services.live import broker, limiter
 from app.services.stages import stages_for
@@ -190,6 +191,56 @@ async def stream(project_id: str, request: Request, token: str = "", db: Session
     )
 
 
+@router.post("/workspaces/{workspace_id}/stream-token")
+def workspace_stream_token(
+    workspace_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> dict:
+    """A live link for the Control Room: hears every project in the workspace."""
+    require_membership(db, user, workspace_id)
+    claims = {"purpose": "workspace-stream", "workspace": workspace_id, "sub": user.id, "ver": user.token_version}
+    return {"token": create_signed(claims, STREAM_TOKEN_MINUTES), "expires_in": STREAM_TOKEN_MINUTES * 60}
+
+
+@router.get("/workspaces/{workspace_id}/stream")
+async def workspace_stream(workspace_id: str, request: Request, token: str = "", db: Session = Depends(get_db)):
+    """Server-Sent Events from every project in the workspace; each message names its project.
+    Projects created after connecting are heard after the next reconnect (every few minutes)."""
+    claims = read_signed(token, "workspace-stream")
+    user = db.get(User, claims["sub"]) if claims and claims.get("workspace") == workspace_id else None
+    if user is None or claims.get("ver") != user.token_version:
+        raise HTTPException(status_code=401, detail="This live link has expired; the page will reconnect")
+    require_membership(db, user, workspace_id)
+    project_ids = list(db.scalars(select(Project.id).where(Project.workspace_id == workspace_id)))
+    db.close()
+
+    max_seconds = get_settings().stream_max_seconds
+    queue: asyncio.Queue = asyncio.Queue(maxsize=200)
+    for pid in project_ids:
+        broker.subscribe(pid, queue)
+
+    async def events():
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + max_seconds
+        try:
+            yield "retry: 3000\nevent: ready\ndata: {}\n\n"
+            while (remaining := deadline - loop.time()) > 0:
+                if await request.is_disconnected():
+                    break
+                try:
+                    msg = await asyncio.wait_for(queue.get(), timeout=min(15.0, remaining))
+                except TimeoutError:
+                    yield ": keep-alive\n\n"
+                    continue
+                yield f"event: {msg['type']}\ndata: {json.dumps(msg)}\n\n"
+        finally:
+            for pid in project_ids:
+                broker.unsubscribe(pid, queue)
+
+    return StreamingResponse(
+        events(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
+
+
 # ---------- alerts ----------
 
 
@@ -216,3 +267,14 @@ def workspace_alerts(
         .limit(30)
     ).all()
     return [alert_rules.to_dict(a, name) for a, name in rows]
+
+
+# ---------- control room ----------
+
+
+@router.get("/workspaces/{workspace_id}/control-room")
+def control_room_view(workspace_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Every promise due in the next 7 days across the workspace, riskiest first, with each module's
+    track record and the latest activity."""
+    require_membership(db, user, workspace_id)
+    return control_room.compute(db, workspace_id, now_utc())

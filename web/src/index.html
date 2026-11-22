@@ -14,7 +14,7 @@
   <script src="config.js"></script>
   <script>
     // Apply the saved theme before the app loads, so there is no flash of the wrong one.
-    try { if (localStorage.getItem('slipcast_theme') === 'light') { document.documentElement.dataset.theme = 'light'; document.querySelector('meta[name="theme-color"]').content = '#F3F5FA'; } } catch (e) {}
+    try { var t = localStorage.getItem('slipcast_theme'), c = { light: '#F3F5FA', neon: '#090D12' }[t]; if (c) { document.documentElement.dataset.theme = t; document.querySelector('meta[name="theme-color"]').content = c; } } catch (e) {}
   </script>
 </head>
 <body>
