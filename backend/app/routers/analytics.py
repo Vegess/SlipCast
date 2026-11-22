@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import get_current_user, get_project_for_user, get_task_for_user
 from app.models import User
-from app.schemas import DraftIn
-from app.services import build_metrics, export, ledger
+from app.schemas import DraftIn, OrderDraftIn
+from app.services import build_metrics, export, ledger, ship_metrics
 from app.services.analysis import get_analysis
 from app.timeutil import now_utc
 
@@ -110,6 +110,25 @@ def build_analytics(project_id: str, user: User = Depends(get_current_user), db:
     """Pull requests, releases and deployments: review wait, size classes and DORA metrics."""
     project = get_project_for_user(db, user, project_id)
     return build_metrics.compute(db, project.id, now_utc())
+
+
+@router.get("/projects/{project_id}/analytics/ship")
+def ship_analytics(project_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Orders: on-time rate by carrier and route, where orders wait, and which open orders will be late."""
+    project = get_project_for_user(db, user, project_id)
+    return ship_metrics.compute(db, project.id, now_utc())
+
+
+@router.post("/projects/{project_id}/ship/estimate")
+def ship_estimate(
+    project_id: str, body: OrderDraftIn, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> dict:
+    """Write-time check for an order that hasn't been placed: how long orders like it took."""
+    project = get_project_for_user(db, user, project_id)
+    today = now_utc().date()
+    return ship_metrics.check(
+        db, project.id, body.origin, body.destination, body.carrier, body.due, today, body.service
+    )
 
 
 @router.get("/tasks/{task_id}/analysis")

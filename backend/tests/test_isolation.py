@@ -84,6 +84,10 @@ def test_cross_tenant_access_is_denied(client, make_user):
     assert client.post(f"/api/projects/{pid}/github", headers=bh).status_code == 404
     assert client.delete(f"/api/projects/{pid}/github", headers=bh).status_code == 404
     assert client.get(f"/api/projects/{pid}/analytics/build", headers=bh).status_code == 404
+    # Ship module
+    assert client.get(f"/api/projects/{pid}/analytics/ship", headers=bh).status_code == 404
+    est = {"origin": "Chennai", "destination": "Delhi", "carrier": "A"}
+    assert client.post(f"/api/projects/{pid}/ship/estimate", json=est, headers=bh).status_code == 404
     assert client.get(f"/api/projects/{pid}/tasks", params={"types": "all"}, headers=bh).status_code == 404
     bob_project = client.post(f"/api/workspaces/{bob['workspace_id']}/projects", json={"name": "B"}, headers=bh).json()
     bob_secret = client.post(f"/api/projects/{bob_project['id']}/github", headers=bh).json()["secret"]

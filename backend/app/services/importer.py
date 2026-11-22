@@ -177,7 +177,7 @@ def parse_csv(raw: bytes, now: pd.Timestamp) -> tuple[list[dict], dict]:
     if "completed_at" not in mapping:
         warnings.append("No resolved/closed date column: cycle times use the created date.")
     if "started_at" not in mapping:
-        warnings.append("No start date column: cycle time is measured from creation, so it " "includes waiting time.")
+        warnings.append("No start date column: cycle time is measured from creation, so it includes waiting time.")
     if inferred_created:
         warnings.append(f"{inferred_created} rows had no created date; today was used.")
     if "description" not in mapping:

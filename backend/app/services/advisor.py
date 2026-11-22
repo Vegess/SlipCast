@@ -178,13 +178,12 @@ RULES: dict[str, Callable[[Finding], tuple[str, str, str]]] = {
     ),
     "under_planned": lambda f: (
         "Align plans with how long similar work really took",
-        "Use the reference-class ranges on the under-planned tickets to reset their due dates before they " "start.",
+        "Use the reference-class ranges on the under-planned tickets to reset their due dates before they start.",
         "medium",
     ),
     "theme_late": lambda f: (
         "Investigate the theme that slips most",
-        "Run a short retro on why work in this area misses its dates, and add buffer to its plans until it "
-        "improves.",
+        "Run a short retro on why work in this area misses its dates, and add buffer to its plans until it improves.",
         "medium",
     ),
     "throughput_drop": lambda f: (

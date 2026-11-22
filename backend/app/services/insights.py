@@ -35,7 +35,23 @@ def _names(tasks: list[TaskView], limit: int = 3) -> str:
     return ", ".join(titles) + (f" and {extra} more" if extra > 0 else "")
 
 
-def analyse(tasks: list[TaskView], today: date) -> HealthResult:
+# The same checks in each module's words (Build keeps the original wording).
+WORDS = {
+    "software": {
+        "one": "task", "many": "tasks", "blocked": "blocked", "unblock": "Unblock these first.",
+        "unowned": "High-priority work has no owner", "not_started": "Due within 3 days and not started",
+        "due": "due date",
+    },
+    "shipments": {
+        "one": "order", "many": "orders", "blocked": "with an exception", "unblock": "Contact the carrier first.",
+        "unowned": "Express orders have no carrier", "not_started": "Due within 3 days and not packed yet",
+        "due": "promised date",
+    },
+}  # fmt: skip
+
+
+def analyse(tasks: list[TaskView], today: date, template: str = "software") -> HealthResult:
+    w = WORDS.get(template, WORDS["software"])
     total = len(tasks)
     open_tasks = [t for t in tasks if t.status != "done"]
     completion = round((total - len(open_tasks)) / total, 3) if total else 0.0
@@ -48,7 +64,8 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
             Insight(
                 kind="overdue",
                 severity="critical" if high or len(overdue) >= 3 else "warning",
-                message=f"{len(overdue)} task{'s are' if len(overdue) > 1 else ' is'} overdue: " f"{_names(overdue)}.",
+                message=f"{len(overdue)} {w['many'] + ' are' if len(overdue) > 1 else w['one'] + ' is'} overdue: "
+                f"{_names(overdue)}.",
                 task_ids=[t.id for t in overdue],
             )
         )
@@ -59,7 +76,7 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
             Insight(
                 kind="blocked",
                 severity="warning",
-                message=f"{len(blocked)} blocked: {_names(blocked)}. Unblock these first.",
+                message=f"{len(blocked)} {w['blocked']}: {_names(blocked)}. {w['unblock']}",
                 task_ids=[t.id for t in blocked],
             )
         )
@@ -70,7 +87,7 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
             Insight(
                 kind="unassigned",
                 severity="warning",
-                message=f"High-priority work has no owner: {_names(unassigned)}.",
+                message=f"{w['unowned']}: {_names(unassigned)}.",
                 task_ids=[t.id for t in unassigned],
             )
         )
@@ -83,7 +100,7 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
                 Insight(
                     kind="overload",
                     severity="warning",
-                    message=f"{owner} holds {count} of {len(open_tasks)} open tasks. " "Consider rebalancing.",
+                    message=f"{owner} holds {count} of {len(open_tasks)} open {w['many']}. Consider rebalancing.",
                     task_ids=[t.id for t in open_tasks if t.owner.strip() == owner],
                 )
             )
@@ -95,7 +112,7 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
             Insight(
                 kind="due_soon",
                 severity="info",
-                message=f"Due within 3 days and not started: {_names(not_started)}.",
+                message=f"{w['not_started']}: {_names(not_started)}.",
                 task_ids=[t.id for t in not_started],
             )
         )
@@ -106,7 +123,7 @@ def analyse(tasks: list[TaskView], today: date) -> HealthResult:
             Insight(
                 kind="undated",
                 severity="info",
-                message=f"{len(undated)} open tasks have no due date, so the timeline " "can't show them.",
+                message=f"{len(undated)} open {w['many']} have no {w['due']}, so the timeline can't show them.",
                 task_ids=[t.id for t in undated],
             )
         )

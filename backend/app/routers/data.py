@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from typing import Literal
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -6,13 +8,17 @@ from app.db import get_db
 from app.deps import get_current_user, get_import_for_user, require_membership
 from app.models import ImportRecord, IngestedEvent, Project, Task, TaskEvent, User
 from app.routers.projects import _counts, _out, next_color
-from app.services import analysis, demo_data, importer, ledger
+from app.services import analysis, demo_data, demo_orders, importer, ledger
 from app.services.stages import stages_for, status_for
 from app.timeutil import naive_utc, now_utc
 
 router = APIRouter(tags=["data"])
 
 DEMO_NAME = "Atlas Billing (demo)"
+DEMOS = {
+    "software": (DEMO_NAME, "Six months of sample tickets from a SaaS billing team"),
+    "shipments": ("Northwind Goods (demo)", "Four months of simulated orders from a D2C brand shipping across India"),
+}
 
 
 def _save(db: Session, project: Project, rows: list[dict], events_of) -> None:
@@ -38,8 +44,9 @@ def _save(db: Session, project: Project, rows: list[dict], events_of) -> None:
             db.add(TaskEvent(task=task, from_status=frm, to_status=to, at=at))
 
 
-def _save_build(db: Session, project: Project, rows: list[dict], start_position: int) -> None:
-    """Demo pull requests, releases and deployments, stored exactly as webhook events would be."""
+def _save_staged(db: Session, project: Project, rows: list[dict], start_position: int) -> None:
+    """Demo items with stage timelines (pull requests, releases, orders), stored exactly as the
+    webhook or the event API would store them."""
     stages = stages_for(db, project)
     by_id = {row["external_id"]: row for row in rows}
     for row in rows:  # a release counts as deployed when its first production deploy succeeds
@@ -56,14 +63,17 @@ def _save_build(db: Session, project: Project, rows: list[dict], start_position:
             project_id=project.id,
             position=start_position + i,
             title=row["title"],
+            description=row.get("description", ""),
             owner=row["owner"],
+            priority=row.get("priority", "medium"),
+            due=row.get("due"),
             status=statuses[-1],
             stage=events[-1][0],
             item_type=row["item_type"],
             attributes=row["attributes"],
             external_id=row["external_id"],
             created_at=events[0][1],
-            started_at=events[0][1],
+            started_at=next((at for (_, at), st in zip(events, statuses, strict=True) if st != "planned"), None),
             completed_at=events[-1][1] if statuses[-1] == "done" else None,
         )
         db.add(task)
@@ -79,35 +89,38 @@ def _save_build(db: Session, project: Project, rows: list[dict], start_position:
 def create_demo_project(
     workspace_id: str,
     response: Response,
+    template: Literal["software", "shipments"] = Query("software"),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
     require_membership(db, user, workspace_id, minimum="member")
-    # One demo per workspace: a second click (or signing up from "Try the demo" and then
-    # clicking Demo data) returns the existing project instead of making a duplicate.
-    existing = db.scalar(
-        select(Project).where(Project.workspace_id == workspace_id, Project.name == DEMO_NAME).limit(1)
-    )
+    name, goal = DEMOS[template]
+    # One demo per module per workspace: a second click (or signing up from "Try the demo"
+    # and then clicking Demo data) returns the existing project instead of a duplicate.
+    existing = db.scalar(select(Project).where(Project.workspace_id == workspace_id, Project.name == name).limit(1))
     if existing is not None:
         response.status_code = status.HTTP_200_OK
         return _out(existing, _counts(db, [existing.id])).model_dump()
     project = Project(
-        workspace_id=workspace_id,
-        name=DEMO_NAME,
-        goal="Six months of sample tickets from a SaaS billing team",
-        color=next_color(db, workspace_id),
+        workspace_id=workspace_id, name=name, goal=goal, template=template, color=next_color(db, workspace_id)
     )
     db.add(project)
     db.flush()
     now = naive_utc(now_utc())
-    rows = demo_data.generate(now)
-    _save(db, project, rows, lambda r: r["events"])
-    _save_build(db, project, demo_data.generate_build(now), len(rows))
+    if template == "shipments":
+        rows = demo_orders.generate_orders(now)
+        _save_staged(db, project, rows, 0)
+        done = sum(r["events"][-1][0] == "delivered" for r in rows)
+    else:
+        rows = demo_data.generate(now)
+        _save(db, project, rows, lambda r: r["events"])
+        _save_staged(db, project, demo_data.generate_build(now), len(rows))
+        done = sum(r["status"] == "done" for r in rows)
     db.flush()
     # Replay history so the demo's forecast ledger shows a real track record.
     ledger.backfill(db, analysis.load(db, project.id, now))
     db.commit()
-    return _out(project, {project.id: (len(rows), sum(r["status"] == "done" for r in rows))}).model_dump()
+    return _out(project, {project.id: (len(rows), done)}).model_dump()
 
 
 @router.post("/workspaces/{workspace_id}/import", status_code=status.HTTP_201_CREATED)
