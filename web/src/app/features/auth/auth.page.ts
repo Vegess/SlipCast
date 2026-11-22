@@ -14,10 +14,10 @@ import { ProviderButtons, SIGN_IN_ERRORS } from '../../shared/provider-buttons.c
     <section class="flex flex-col justify-between px-6 py-8 sm:px-12 lg:border-r lg:border-line lg:py-14">
       <a routerLink="/" class="font-display text-xl font-bold hover:text-accent">SlipCast</a>
       <div class="my-10 max-w-xl">
-        <h1 class="anim-rise text-4xl font-bold leading-[1.05] sm:text-6xl">Know when your work will really ship, and why it slips.</h1>
+        <h1 class="anim-rise text-4xl font-bold leading-[1.05] sm:text-6xl">Know which promises will slip, while there&rsquo;s still time.</h1>
         <p class="anim-rise mt-5 max-w-md text-base text-muted" style="--i: 3">
-          SlipCast turns your ticket history from Jira, GitHub or Trello into a clear picture of how
-          work actually flows through your team, and where it gets stuck.
+          SlipCast forecasts every delivery promise (tickets and pull requests today, orders and
+          service jobs next) and keeps score of how often it was right.
         </p>
         <svg viewBox="0 0 520 220" class="mt-10 hidden w-full max-w-lg sm:block" aria-hidden="true">
           <!-- History draws itself, then the forecast cone opens and its dashed median keeps moving. -->
@@ -34,7 +34,7 @@ import { ProviderButtons, SIGN_IN_ERRORS } from '../../shared/provider-buttons.c
           
         </svg>
       </div>
-      <p class="text-xs text-muted">Angular · FastAPI · PostgreSQL · pandas · scikit-learn</p>
+      <p class="text-xs text-muted">Build is live · Ship and Serve are coming</p>
     </section>
 
     <section class="flex items-center justify-center px-6 py-10">
